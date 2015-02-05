@@ -381,8 +381,6 @@ s32 main( s32 argc, char*argv[])
 	printf("CDecrypt v 1.0b by crediar\n");
 	printf("Built: %s %s\n", __TIME__, __DATE__ );
 
-	printf("It is not allowed to resell, rehost, redistribute\nor include this file in any packages!\n\n");
-
 	if( argc != 4 )
 	{
 		printf("Usage:\n");
