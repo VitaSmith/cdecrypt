@@ -18,6 +18,16 @@
 */
 #define _CRT_SECURE_NO_WARNINGS
 
+
+unsigned char WiiUCommenDevKey[16] =
+{
+    0x2F, 0x5C, 0x1B, 0x29, 0x44, 0xE7, 0xFD, 0x6F, 0xC3, 0x97, 0x96, 0x4B, 0x05, 0x76, 0x91, 0xFA, 
+};
+unsigned char WiiUCommenKey[16] =
+{
+    0xD7, 0xB0, 0x04, 0x02, 0x65, 0x9B, 0xA2, 0xAB, 0xD2, 0xCB, 0x0D, 0xB2, 0x7F, 0xA2, 0xB6, 0x56, 
+};
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -154,7 +164,7 @@ struct FEntry
 	unsigned short ContentID;
 };
 
-#define bs16(s) (unsigned short)( ((s)>>8) | ((s)<<8) )
+#define bs16(s) (u16)( ((s)>>8) | ((s)<<8) )
 #define bs32(s) (u32)( (((s)&0xFF0000)>>8) | (((s)&0xFF00)<<8) | ((s)>>24) | ((s)<<24) )
 
 u32 bs24( u32 i )
@@ -355,7 +365,7 @@ void ExtractFile( FILE *in, u64 PartDataOffset, u64 FileOffset, u64 Size, char *
 	while(Size > 0)
 	{
 		if( WriteSize > Size )
-			WriteSize = Size;
+				WriteSize = Size;
 
 		fread( encdata, sizeof( char ), BLOCK_SIZE, in);
 		
@@ -378,13 +388,13 @@ s32 main( s32 argc, char*argv[])
 {
 	char str[1024];
 	
-	printf("CDecrypt v 1.0b by crediar\n");
+	printf("CDecrypt v 2.0b by crediar\n");
 	printf("Built: %s %s\n", __TIME__, __DATE__ );
 
-	if( argc != 4 )
+	if( argc != 3 )
 	{
 		printf("Usage:\n");
-		printf(" CDecrypt.exe tmd cetk ckey\n\n");
+		printf(" CDecrypt.exe tmd cetk\n\n");
 		return EXIT_SUCCESS;
 	}
 
@@ -403,20 +413,6 @@ s32 main( s32 argc, char*argv[])
 		perror("Failed to open cetk\n");
 		return EXIT_FAILURE;
 	}
-	
-	u32 CKeyLen;
-	char *CKey = ReadFile( argv[3], &CKeyLen );
-	if( CKey == nullptr )
-	{
-		perror("Failed to open ckey\n");
-		return EXIT_FAILURE;
-	}
-
-	if( CKeyLen != 16 )
-	{
-		printf("ckey is wrong length\n");
-		return EXIT_FAILURE;
-	}
 
 	TitleMetaData *tmd = (TitleMetaData*)TMD;
 
@@ -429,30 +425,26 @@ s32 main( s32 argc, char*argv[])
 	printf("Title version:%u\n", bs16(tmd->TitleVersion) );
 	printf("Content Count:%u\n", bs16(tmd->ContentCount) );
 
-	AES_set_decrypt_key( (const u8*)CKey, CKeyLen*8, &key );
+	if( strcmp( TMD+0x140, "Root-CA00000003-CP0000000b" ) == 0 )
+	{
+		AES_set_decrypt_key( (const u8*)WiiUCommenKey, sizeof(WiiUCommenKey)*8, &key );
+	}
+	else if( strcmp( TMD+0x140, "Root-CA00000004-CP00000010" ) == 0 )
+	{
+		AES_set_decrypt_key( (const u8*)WiiUCommenDevKey, sizeof(WiiUCommenDevKey)*8, &key );
+	}
+	else
+	{
+		printf("Unknown Root type:\"%s\"\n", TMD+0x140 );
+		return EXIT_FAILURE;
+	}	
 
 	memset( title_id, 0, sizeof(title_id) );
 	
 	memcpy( title_id, TMD + 0x18C, 8 );
 	memcpy( enc_title_key, TIK + 0x1BF, 16 );
 	
-	printf("Encrypted Title KEY:\n\t");
-	for(s32 i=0; i< sizeof(enc_title_key); ++i)
-		printf("%02X", enc_title_key[i]);
-	printf("\n");
-		
-	printf("Title ID:\n\t");
-	for(s32 i=0; i< sizeof(title_id); ++i)
-		printf("%02X", title_id[i]);
-	printf("\n");
-	
 	AES_cbc_encrypt(enc_title_key, dec_title_key, sizeof(dec_title_key), &key, title_id, AES_DECRYPT);
-	
-	printf("Decrypted Title KEY:\n\t");
-	for(s32 i=0; i< sizeof(dec_title_key); ++i)
-		printf("%02X", dec_title_key[i]);
-	printf("\n");
-
 	AES_set_decrypt_key( dec_title_key, sizeof(dec_title_key)*8, &key);
 		
 	char iv[16];
@@ -481,6 +473,13 @@ s32 main( s32 argc, char*argv[])
 
 	AES_cbc_encrypt( (const u8 *)(CNT), (u8 *)(CNT), CNTLen, &key, (u8*)(iv), AES_DECRYPT );	
 
+	if( bs32(*(u32*)CNT) != 0x46535400 )
+	{
+		sprintf( str, "%08X.dec", bs32(tmd->Contents[0].ID) );
+		FileDump( str, CNT, CNTLen );
+		return EXIT_FAILURE;
+	}
+	
 	FST *_fst = (FST*)(CNT);
 
 	printf("FSTInfo Entries:%u\n", bs32(_fst->EntryCount) );
@@ -523,8 +522,9 @@ s32 main( s32 argc, char*argv[])
 				printf("level error:%u\n", level );
 				break;
 			}
-		} else {
-
+		}
+		else
+		{
 			memset( Path, 0, 1024 );
 
 			for( s32 j=0; j<level; ++j )
@@ -539,7 +539,12 @@ s32 main( s32 argc, char*argv[])
 			memcpy( Path+strlen(Path), CNT + NameOff + bs24( fe[i].NameOffset ), strlen(CNT + NameOff + bs24( fe[i].NameOffset )) );
 
 			u32 CNTSize = bs32(fe[i].FileLength);
-			u64 CNTOff  = ((u64)bs32(fe[i].FileOffset))<<5;
+			u64 CNTOff  = ((u64)bs32(fe[i].FileOffset));
+
+			if( (bs16(fe[i].Flags) & 4) == 0 )
+			{
+				CNTOff <<= 5;
+			}
 			
 			printf("Size:%07X Offset:0x%010llX CID:%02X U:%02X %s\n", CNTSize, CNTOff, bs16(fe[i].ContentID), bs16(fe[i].Flags), Path );
 
