@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29318.209
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{BECC573B-63A8-4A25-8CF7-4E301ADEB451}") = "cdecrypt", ".vs\cdecrypt.vcxproj", "{3BC46AE2-C27A-4B9F-B4C0-04F694F449BA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3BC46AE2-C27A-4B9F-B4C0-04F694F449BA}.Debug|x64.ActiveCfg = Debug|x64
+		{3BC46AE2-C27A-4B9F-B4C0-04F694F449BA}.Debug|x64.Build.0 = Debug|x64
+		{3BC46AE2-C27A-4B9F-B4C0-04F694F449BA}.Debug|x86.ActiveCfg = Debug|Win32
+		{3BC46AE2-C27A-4B9F-B4C0-04F694F449BA}.Debug|x86.Build.0 = Debug|Win32
+		{3BC46AE2-C27A-4B9F-B4C0-04F694F449BA}.Release|x64.ActiveCfg = Release|x64
+		{3BC46AE2-C27A-4B9F-B4C0-04F694F449BA}.Release|x64.Build.0 = Release|x64
+		{3BC46AE2-C27A-4B9F-B4C0-04F694F449BA}.Release|x86.ActiveCfg = Release|Win32
+		{3BC46AE2-C27A-4B9F-B4C0-04F694F449BA}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+EndGlobal
