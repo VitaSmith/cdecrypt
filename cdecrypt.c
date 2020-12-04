@@ -1,22 +1,24 @@
 /*
-    CDecrypt - Decrypt Wii U NUS content files [https://code.google.com/p/cdecrypt/]
+  cdecrypt - Decrypt Wii U NUS content files
 
-    Copyright (c) 2013-2015 crediar
+  Copyright © 2013-2015 crediar <https://code.google.com/p/cdecrypt/>
+  Copyright © 2020 VitaSmith <https://github.com/VitaSmith/cdecrypt>
 
-    CDecrypt is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <assert.h>
 #include <direct.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -26,7 +28,14 @@
 #include <openssl\aes.h>
 #include <openssl\sha.h>
 
+#include "utf8.h"
+#include "util.h"
+
 #pragma comment(lib,"libcrypto.lib")
+
+#define MAX_ENTRIES     90000
+#define MAX_LEVELS      16
+#define FST_MAGIC       ((uint32_t)'FST\0')
 
 uint8_t WiiUCommonDevKey[16] =
     { 0x2F, 0x5C, 0x1B, 0x29, 0x44, 0xE7, 0xFD, 0x6F, 0xC3, 0x97, 0x96, 0x4B, 0x05, 0x76, 0x91, 0xFA };
@@ -146,61 +155,23 @@ struct FEntry
     uint16_t ContentID;
 };
 
-#define bs16(s) (uint16_t)( ((s)>>8) | ((s)<<8) )
-#define bs32(s) (uint32_t)( (((s)&0xFF0000)>>8) | (((s)&0xFF00)<<8) | ((s)>>24) | ((s)<<24) )
-uint32_t bs24(uint32_t i)
+static bool FileDump(const char* Name, void* Data, uint32_t Length)
 {
-    return ((i & 0xFF0000) >> 16) | ((i & 0xFF) << 16) | (i & 0x00FF00);
-}
-uint64_t bs64(uint64_t i)
-{
-    return ((uint64_t)(bs32(i & 0xFFFFFFFF)) << 32) | (bs32(i >> 32));
-}
+    assert(Data != NULL);
+    assert(Length != 0);
 
-char* ReadFromFile(const char* Name, uint32_t* Length)
-{
-    FILE* in = fopen(Name, "rb");
-    if (in == NULL)
-        return NULL;
-
-
-    fseek(in, 0, SEEK_END);
-    *Length = ftell(in);
-
-    fseek(in, 0, 0);
-
-    char* Data = malloc(*Length);
-    if (Data == NULL)
-        return NULL;
-
-    fread(Data, 1, *Length, in);
-
-    fclose(in);
-
-    return Data;
-}
-
-void FileDump(const char* Name, void* Data, uint32_t Length)
-{
-    if (Data == NULL) {
-        printf("zero ptr");
-        return;
-    }
-    if (Length == 0) {
-        printf("zero sz");
-        return;
-    }
-    FILE* Out = fopen(Name, "wb");
+    FILE* Out = fopen_utf8(Name, "wb");
     if (Out == NULL) {
-        perror("");
-        return;
+        fprintf(stderr, "ERROR: Cannot dump file \"%s\"\n", Name);
+        return false;
     }
 
-    if (fwrite(Data, 1, Length, Out) != Length) {
-        perror("");
-    }
+    bool r = (fwrite(Data, 1, Length, Out) == Length);
+    if (!r)
+        fprintf(stderr, "ERROR: Failed to dump file \"%s\"\n", Name);
 
     fclose(Out);
+    return r;
 }
 
 static char ascii(char s)
@@ -210,7 +181,7 @@ static char ascii(char s)
     return s;
 }
 
-void hexdump(void* d, int32_t len)
+static void hexdump(void* d, int32_t len)
 {
     uint8_t* data;
     int32_t i, off;
@@ -235,10 +206,13 @@ void hexdump(void* d, int32_t len)
 }
 
 #define BLOCK_SIZE  0x10000
-void ExtractFileHash(FILE* in, uint64_t PartDataOffset, uint64_t FileOffset, uint64_t Size, char* FileName, uint16_t ContentID)
+static bool ExtractFileHash(FILE* in, uint64_t PartDataOffset, uint64_t FileOffset, uint64_t Size, char* FileName, uint16_t ContentID)
 {
-    char encdata[BLOCK_SIZE];
-    char decdata[BLOCK_SIZE];
+    bool r = false;
+    char *encdata = malloc(BLOCK_SIZE);
+    char *decdata = malloc(BLOCK_SIZE);
+    assert(encdata != NULL);
+    assert(decdata != NULL);
     uint8_t IV[16];
     uint8_t hash[SHA_DIGEST_LENGTH];
     uint8_t H0[SHA_DIGEST_LENGTH];
@@ -248,11 +222,10 @@ void ExtractFileHash(FILE* in, uint64_t PartDataOffset, uint64_t FileOffset, uin
     uint64_t WriteSize = 0xFC00;	// Hash block size
     uint64_t Block = (FileOffset / 0xFC00) & 0xF;
 
-    FILE* out = fopen(FileName, "wb");
-    if (out == NULL) {
-        printf("Could not create \"%s\"\n", FileName);
-        perror("");
-        exit(0);
+    FILE* dst = fopen_utf8(FileName, "wb");
+    if (dst == NULL) {
+        fprintf(stderr, "ERROR: Could not create \"%s\"\n", FileName);
+        goto out;
     }
 
     uint64_t roffset = FileOffset / 0xFC00 * BLOCK_SIZE;
@@ -288,11 +261,11 @@ void ExtractFileHash(FILE* in, uint64_t PartDataOffset, uint64_t FileOffset, uin
             hexdump(hash, SHA_DIGEST_LENGTH);
             hexdump(Hashes, 0x100);
             hexdump(decdata, 0x100);
-            printf("Failed to verify H0 hash\n");
-            exit(0);
+            fprintf(stderr, "ERROR: Failed to verify H0 hash\n");
+            goto out;
         }
 
-        Size -= fwrite(decdata + soffset, sizeof(char), WriteSize, out);
+        Size -= fwrite(decdata + soffset, sizeof(char), WriteSize, dst);
 
         Wrote += WriteSize;
 
@@ -305,30 +278,38 @@ void ExtractFileHash(FILE* in, uint64_t PartDataOffset, uint64_t FileOffset, uin
             soffset = 0;
         }
     }
+    r = true;
 
-    fclose(out);
+out:
+    if (dst != NULL)
+        fclose(dst);
+    free(encdata);
+    free(decdata);
+    return r;
 }
 #undef BLOCK_SIZE
-#define BLOCK_SIZE  0x8000
 
-void ExtractFile(FILE* in, uint64_t PartDataOffset, uint64_t FileOffset, uint64_t Size, char* FileName, uint16_t ContentID)
+#define BLOCK_SIZE  0x8000
+static bool ExtractFile(FILE* in, uint64_t PartDataOffset, uint64_t FileOffset, uint64_t Size, char* FileName, uint16_t ContentID)
 {
-    char encdata[BLOCK_SIZE];
-    char decdata[BLOCK_SIZE];
+    bool r = false;
+    char* encdata = malloc(BLOCK_SIZE);
+    char* decdata = malloc(BLOCK_SIZE);
+    assert(encdata != NULL);
+    assert(decdata != NULL);
     uint64_t Wrote = 0;
 
     //printf("PO:%08llX FO:%08llX FS:%llu\n", PartDataOffset, FileOffset, Size );
 
-    //calc real offset
+    // Calc real offset
     uint64_t roffset = FileOffset / BLOCK_SIZE * BLOCK_SIZE;
     uint64_t soffset = FileOffset - (FileOffset / BLOCK_SIZE * BLOCK_SIZE);
     //printf("Extracting:\"%s\" RealOffset:%08llX RealOffset:%08llX\n", FileName, roffset, soffset );
 
-    FILE* out = fopen(FileName, "wb");
-    if (out == NULL) {
-        printf("Could not create \"%s\"\n", FileName);
-        perror("");
-        exit(0);
+    FILE* dst = fopen_utf8(FileName, "wb");
+    if (dst == NULL) {
+        fprintf(stderr, "ERROR: Could not create \"%s\"\n", FileName);
+        goto out;
     }
     uint8_t IV[16];
     memset(IV, 0, sizeof(IV));
@@ -349,7 +330,7 @@ void ExtractFile(FILE* in, uint64_t PartDataOffset, uint64_t FileOffset, uint64_
 
         AES_cbc_encrypt((const uint8_t*)(encdata), (uint8_t*)decdata, BLOCK_SIZE, &key, IV, AES_DECRYPT);
 
-        Size -= fwrite(decdata + soffset, sizeof(char), WriteSize, out);
+        Size -= fwrite(decdata + soffset, sizeof(char), WriteSize, dst);
 
         Wrote += WriteSize;
 
@@ -359,54 +340,57 @@ void ExtractFile(FILE* in, uint64_t PartDataOffset, uint64_t FileOffset, uint64_
         }
     }
 
-    fclose(out);
-}
+    r = true;
 
-int main(int argc, char* argv[])
+out:
+    if (dst != NULL)
+        fclose(dst);
+    free(encdata);
+    free(decdata);
+    return r;
+}
+#undef BLOCK_SIZE
+
+int main_utf8(int argc, char** argv)
 {
+    int r = EXIT_FAILURE;
+    uint8_t *TMD = NULL, *TIK = NULL, *CNT = NULL;
     char str[1024];
 
-    printf("CDecrypt v 2.0b by crediar\n");
-    printf("Built: %s %s\n", __TIME__, __DATE__);
-
     if (argc != 3) {
-        printf("Usage:\n");
-        printf(" CDecrypt.exe tmd cetk\n\n");
+        printf("%s %s (c) 2013-2015 crediar, (c) 2020 VitaSmith\n\n"
+            "Usage: %s <title.tmd> <title.tik>\n\n"
+            "Decrypt Wii U NUS content files.\n\n",
+            appname(argv[0]), APP_VERSION_STR, appname(argv[0]));
         return EXIT_SUCCESS;
     }
 
-    uint32_t TMDLen;
-    char* TMD = ReadFromFile(argv[1], &TMDLen);
-    if (TMD == NULL) {
-        perror("Failed to open tmd\n");
-        return EXIT_FAILURE;
-    }
+    uint32_t TMDLen = read_file(argv[1], &TMD);
+    if (TMDLen == 0)
+        goto out;
 
-    uint32_t TIKLen;
-    char* TIK = ReadFromFile(argv[2], &TIKLen);
-    if (TIK == NULL) {
-        perror("Failed to open cetk\n");
-        return EXIT_FAILURE;
-    }
+    uint32_t TIKLen = read_file(argv[2], &TIK);
+    if (TIKLen == 0)
+        goto out;
 
     TitleMetaData* tmd = (TitleMetaData*)TMD;
 
     if (tmd->Version != 1) {
-        printf("Unsupported TMD Version:%u\n", tmd->Version);
-        return EXIT_FAILURE;
+        fprintf(stderr, "ERROR: Unsupported TMD Version: %u\n", tmd->Version);
+        goto out;
     }
 
-    printf("Title version:%u\n", bs16(tmd->TitleVersion));
-    printf("Content Count:%u\n", bs16(tmd->ContentCount));
+    printf("Title version:%u\n", getbe16(&tmd->TitleVersion));
+    printf("Content Count:%u\n", getbe16(&tmd->ContentCount));
 
-    if (strcmp(TMD + 0x140, "Root-CA00000003-CP0000000b") == 0) {
+    if (strcmp((char*)TMD + 0x140, "Root-CA00000003-CP0000000b") == 0) {
         AES_set_decrypt_key((const uint8_t*)WiiUCommonKey, sizeof(WiiUCommonKey) * 8, &key);
     }
-    else if (strcmp(TMD + 0x140, "Root-CA00000004-CP00000010") == 0) {
+    else if (strcmp((char*)TMD + 0x140, "Root-CA00000004-CP00000010") == 0) {
         AES_set_decrypt_key((const uint8_t*)WiiUCommonDevKey, sizeof(WiiUCommonDevKey) * 8, &key);
     } else {
-        printf("Unknown Root type:\"%s\"\n", TMD + 0x140);
-        return EXIT_FAILURE;
+        fprintf(stderr, "ERROR: Unknown Root type: \"%s\"\n", TMD + 0x140);
+        goto out;
     }
 
     memset(title_id, 0, sizeof(title_id));
@@ -420,45 +404,47 @@ int main(int argc, char* argv[])
     char iv[16];
     memset(iv, 0, sizeof(iv));
 
-    sprintf(str, "%08X.app", bs32(tmd->Contents[0].ID));
+    sprintf(str, "%08X.app", getbe32(&tmd->Contents[0].ID));
 
-    uint32_t CNTLen;
-    char* CNT = ReadFromFile(str, &CNTLen);
-    if (CNT == NULL) {
-        sprintf(str, "%08X", bs32(tmd->Contents[0].ID));
-        CNT = ReadFromFile(str, &CNTLen);
-        if (CNT == NULL) {
-            printf("Failed to open content:%02X\n", bs32(tmd->Contents[0].ID));
-            return EXIT_FAILURE;
+    uint32_t CNTLen = read_file(str, &CNT);
+    if (CNTLen == 0) {
+        sprintf(str, "%08X", getbe32(&tmd->Contents[0].ID));
+        CNTLen = read_file(str, &CNT);
+        if (CNTLen == 0) {
+            fprintf(stderr, "ERROR: Failed to open content: %02X\n", getbe32(&tmd->Contents[0].ID));
+            goto out;
         }
     }
 
-    if (bs64(tmd->Contents[0].Size) != (uint64_t)CNTLen) {
-        printf("Size of content:%u is wrong: %u:%I64u\n", bs32(tmd->Contents[0].ID), CNTLen, bs64(tmd->Contents[0].Size));
-        return EXIT_FAILURE;
+    if (getbe64(&tmd->Contents[0].Size) != (uint64_t)CNTLen) {
+        fprintf(stderr, "ERROR: Size of content %u is wrong: %u:%I64u\n",
+            getbe32(&tmd->Contents[0].ID), CNTLen, getbe64(&tmd->Contents[0].Size));
+        goto out;
     }
 
     AES_cbc_encrypt((const uint8_t*)(CNT), (uint8_t*)(CNT), CNTLen, &key, (uint8_t*)(iv), AES_DECRYPT);
 
-    if (bs32(*(uint32_t*)CNT) != 0x46535400) {
-        sprintf(str, "%08X.dec", bs32(tmd->Contents[0].ID));
+    if (getbe32(CNT) != FST_MAGIC) {
+        sprintf(str, "%08X.dec", getbe32(&tmd->Contents[0].ID));
+        fprintf(stderr, "ERROR: Unexpected content magic. Dumping decrypted file as \"%s\"\n", str);
         FileDump(str, CNT, CNTLen);
-        return EXIT_FAILURE;
+        goto out;
     }
 
     struct FST* _fst = (struct FST*)(CNT);
 
-    printf("FSTInfo Entries:%u\n", bs32(_fst->EntryCount));
-    if (bs32(_fst->EntryCount) > 90000) {
-        return EXIT_FAILURE;
+    printf("FSTInfo Entries: %u\n", getbe32(&_fst->EntryCount));
+    if (getbe32(&_fst->EntryCount) > MAX_ENTRIES) {
+        fprintf(stderr, "ERROR: Too many entries\n");
+        goto out;
     }
 
-    struct FEntry* fe = (struct FEntry*)(CNT + 0x20 + bs32(_fst->EntryCount) * 0x20);
+    struct FEntry* fe = (struct FEntry*)(CNT + 0x20 + (uintptr_t)getbe32(&_fst->EntryCount) * 0x20);
 
-    uint32_t Entries = bs32(*(uint32_t*)(CNT + 0x20 + bs32(_fst->EntryCount) * 0x20 + 8));
-    uint32_t NameOff = 0x20 + bs32(_fst->EntryCount) * 0x20 + Entries * 0x10;
+    uint32_t Entries = getbe32(CNT + 0x20 + (uintptr_t)getbe32(&_fst->EntryCount) * 0x20 + 8);
+    uint32_t NameOff = 0x20 + getbe32(&_fst->EntryCount) * 0x20 + Entries * 0x10;
 
-    printf("FST entries:%u\n", Entries);
+    printf("FST entries: %u\n", Entries);
 
     char Path[1024] = { 0 };
     uint32_t Entry[16];
@@ -468,62 +454,74 @@ int main(int argc, char* argv[])
 
     for (uint32_t i = 1; i < Entries; i++) {
         if (level > 0) {
-            while ((level >= 1) && (LEntry[level - 1] == i)) {
-                //printf("[%03X]leaving :\"%s\" Level:%d\n", i, CNT + NameOff + bs24( fe[Entry[level-1]].NameOffset ), level );
+            while ((level >= 1) && (LEntry[level - 1] == i))
                 level--;
-            }
         }
 
         if (fe[i].Type & 1) {
             Entry[level] = i;
-            LEntry[level++] = bs32(fe[i].NextOffset);
-            if (level > 15) {   // something is wrong!
-                printf("level error:%u\n", level);
+            LEntry[level++] = getbe32(&fe[i].NextOffset);
+            if (level >= MAX_LEVELS) {
+                fprintf(stderr, "ERROR: Too many levels\n");
                 break;
             }
         } else {
-            memset(Path, 0, 1024);
+            uint32_t Offset;
+            memset(Path, 0, sizeof(Path));
 
             for (uint32_t j = 0; j < level; j++) {
                 if (j)
                     Path[strlen(Path)] = '\\';
-                memcpy(Path + strlen(Path), CNT + NameOff + bs24(fe[Entry[j]].NameOffset), strlen(CNT + NameOff + bs24(fe[Entry[j]].NameOffset)));
-                _mkdir(Path);
+                Offset = getbe32(&fe[Entry[j]].TypeName) & 0x00FFFFFF;
+                memcpy(Path + strlen(Path), CNT + NameOff + Offset, strlen((char*)CNT + NameOff + Offset));
+                create_path(Path);
             }
             if (level > 0)
                 Path[strlen(Path)] = '\\';
-            memcpy(Path + strlen(Path), CNT + NameOff + bs24(fe[i].NameOffset), strlen(CNT + NameOff + bs24(fe[i].NameOffset)));
+            Offset = getbe32(&fe[i].TypeName) & 0x00FFFFFF;
+            memcpy(Path + strlen(Path), CNT + NameOff + Offset, strlen((char*)CNT + NameOff + Offset));
 
-            uint32_t CNTSize = bs32(fe[i].FileLength);
-            uint64_t CNTOff = ((uint64_t)bs32(fe[i].FileOffset));
+            uint32_t CNTSize = getbe32(&fe[i].FileLength);
+            uint64_t CNTOff = ((uint64_t)getbe32(&fe[i].FileOffset));
 
-            if ((bs16(fe[i].Flags) & 4) == 0)
+            if ((getbe16(&fe[i].Flags) & 4) == 0)
                 CNTOff <<= 5;
 
-            printf("Size:%07X Offset:0x%010llX CID:%02X U:%02X %s\n", CNTSize, CNTOff, bs16(fe[i].ContentID), bs16(fe[i].Flags), Path);
+            printf("Size:%07X Offset:0x%010llX CID:%02X U:%02X %s\n", CNTSize, CNTOff,
+                getbe16(&fe[i].ContentID), getbe16(&fe[i].Flags), Path);
 
-            uint32_t ContFileID = bs32(tmd->Contents[bs16(fe[i].ContentID)].ID);
+            uint32_t ContFileID = getbe32(&tmd->Contents[getbe16(&fe[i].ContentID)].ID);
 
             sprintf(str, "%08X.app", ContFileID);
 
             if (!(fe[i].Type & 0x80)) {
-                FILE* cnt = fopen(str, "rb");
+                FILE* cnt = fopen_utf8(str, "rb");
                 if (cnt == NULL) {
                     sprintf(str, "%08X", ContFileID);
-                    cnt = fopen(str, "rb");
+                    cnt = fopen_utf8(str, "rb");
                     if (cnt == NULL) {
-                        printf("Could not open:\"%s\"\n", str);
-                        perror("");
-                        return EXIT_FAILURE;
+                        fprintf(stderr, "ERROR: Could not open: \"%s\"\n", str);
+                        goto out;
                     }
                 }
-                if ((bs16(fe[i].Flags) & 0x440))
-                    ExtractFileHash(cnt, 0, CNTOff, bs32(fe[i].FileLength), Path, bs16(fe[i].ContentID));
-                else
-                    ExtractFile(cnt, 0, CNTOff, bs32(fe[i].FileLength), Path, bs16(fe[i].ContentID));
-                 fclose(cnt);
+                if ((getbe16(&fe[i].Flags) & 0x440)) {
+                    if (!ExtractFileHash(cnt, 0, CNTOff, getbe32(&fe[i].FileLength), Path, getbe16(&fe[i].ContentID)))
+                        goto out;
+                } else {
+                    if (!ExtractFile(cnt, 0, CNTOff, getbe32(&fe[i].FileLength), Path, getbe16(&fe[i].ContentID)))
+                        goto out;
+                }
+                fclose(cnt);
             }
         }
     }
-    return EXIT_SUCCESS;
+    r = EXIT_SUCCESS;
+
+out:
+    free(TMD);
+    free(TIK);
+    free(CNT);
+    return r;
 }
+
+CALL_MAIN

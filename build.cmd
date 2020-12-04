@@ -13,7 +13,7 @@ if not "%1"=="" goto %1
 :cdecrypt
 echo.
 set APP_NAME=cdecrypt
-cl.exe %APP_NAME%.c /Fe%APP_NAME%.exe
+cl.exe %APP_NAME%.c util.c /Fe%APP_NAME%.exe
 if %ERRORLEVEL% neq 0 goto out
 echo =^> %APP_NAME%.exe
 if not "%1"=="" goto out
