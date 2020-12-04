@@ -173,7 +173,7 @@ char* ReadFile(const char* Name, uint32_t* Length)
 
     char* Data = new char[*Length];
 
-    uint32_t read = fread(Data, 1, *Length, in);
+    fread(Data, 1, *Length, in);
 
     fclose(in);
 
@@ -316,7 +316,6 @@ void ExtractFile(FILE* in, uint64_t PartDataOffset, uint64_t FileOffset, uint64_
     char encdata[BLOCK_SIZE];
     char decdata[BLOCK_SIZE];
     uint64_t Wrote = 0;
-    uint64_t Block = (FileOffset / BLOCK_SIZE) & 0xF;
 
     //printf("PO:%08llX FO:%08llX FS:%llu\n", PartDataOffset, FileOffset, Size );
 
@@ -458,19 +457,18 @@ int main(int argc, char* argv[])
 
     uint32_t Entries = bs32(*(uint32_t*)(CNT + 0x20 + bs32(_fst->EntryCount) * 0x20 + 8));
     uint32_t NameOff = 0x20 + bs32(_fst->EntryCount) * 0x20 + Entries * 0x10;
-    uint32_t DirEntries = 0;
 
     printf("FST entries:%u\n", Entries);
 
     char* Path = new char[1024];
-    int32_t Entry[16];
-    int32_t LEntry[16];
+    uint32_t Entry[16];
+    uint32_t LEntry[16];
 
-    int32_t level = 0;
+    uint32_t level = 0;
 
     for (uint32_t i = 1; i < Entries; i++) {
-        if (level) {
-            while (LEntry[level - 1] == i) {
+        if (level > 0) {
+            while ((level >= 1) && (LEntry[level - 1] == i)) {
                 //printf("[%03X]leaving :\"%s\" Level:%d\n", i, CNT + NameOff + bs24( fe[Entry[level-1]].NameOffset ), level );
                 level--;
             }
@@ -486,13 +484,13 @@ int main(int argc, char* argv[])
         } else {
             memset(Path, 0, 1024);
 
-            for (int32_t j = 0; j < level; ++j) {
+            for (uint32_t j = 0; j < level; j++) {
                 if (j)
                     Path[strlen(Path)] = '\\';
                 memcpy(Path + strlen(Path), CNT + NameOff + bs24(fe[Entry[j]].NameOffset), strlen(CNT + NameOff + bs24(fe[Entry[j]].NameOffset)));
                 _mkdir(Path);
             }
-            if (level)
+            if (level > 0)
                 Path[strlen(Path)] = '\\';
             memcpy(Path + strlen(Path), CNT + NameOff + bs24(fe[i].NameOffset), strlen(CNT + NameOff + bs24(fe[i].NameOffset)));
 
