@@ -26,10 +26,11 @@
 #include <string.h>
 
 #include <openssl\aes.h>
-#include <openssl\sha.h>
+//#include <openssl\sha.h>
 
 #include "utf8.h"
 #include "util.h"
+#include "sha1.h"
 
 #pragma comment(lib,"libcrypto.lib")
 
@@ -252,7 +253,10 @@ static bool ExtractFileHash(FILE* in, uint64_t PartDataOffset, uint64_t FileOffs
             IV[1] ^= ContentID;
         AES_cbc_encrypt((const uint8_t*)(encdata + 0x400), (uint8_t*)decdata, 0xFC00, &key, IV, AES_DECRYPT);
 
-        SHA1((const uint8_t*)decdata, 0xFC00, hash);
+
+        sha1((const uint8_t*)decdata, 0xFC00, hash);
+//        sha1(const uint8_t * input, size_t ilen, uint8_t output[SHA_DIGEST_LENGTH])
+
         if (Block == 0)
             hash[1] ^= ContentID;
         H0Count++;
