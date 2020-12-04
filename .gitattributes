@@ -1,0 +1,4 @@
+Makefile        eol=lf
+*.cmd           eol=crlf
+.gitattributes  export-ignore
+.gitignore      export-ignore
