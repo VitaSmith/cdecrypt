@@ -28,6 +28,7 @@ unsigned char WiiUCommenKey[16] =
     0xD7, 0xB0, 0x04, 0x02, 0x65, 0x9B, 0xA2, 0xAB, 0xD2, 0xCB, 0x0D, 0xB2, 0x7F, 0xA2, 0xB6, 0x56, 
 };
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -40,26 +41,14 @@ unsigned char WiiUCommenKey[16] =
 
 #pragma comment(lib,"libcrypto.lib")
 
-typedef unsigned	__int64 u64;
-typedef signed		__int64 s64;
-
-typedef unsigned	int u32;
-typedef signed		int s32;
-
-typedef unsigned	short u16;
-typedef signed		short s16;
-
-typedef unsigned	char u8;
-typedef signed		char s8;
-
 AES_KEY key;
-u8 enc_title_key[16];
-u8 dec_title_key[16];
-u8 title_id[16];
-u8 dkey[16];
+uint8_t enc_title_key[16];
+uint8_t dec_title_key[16];
+uint8_t title_id[16];
+uint8_t dkey[16];
 
-u64 H0Count = 0;
-u64 H0Fail  = 0;
+uint64_t H0Count = 0;
+uint64_t H0Fail  = 0;
 
 #pragma pack(1)
 
@@ -72,44 +61,44 @@ enum ContentType
 
 typedef struct
 {
-	u16 IndexOffset;	//	0	 0x204
-	u16 CommandCount;	//	2	 0x206
-	u8	SHA2[32];			//  12 0x208
+	uint16_t IndexOffset;	//	0	 0x204
+	uint16_t CommandCount;	//	2	 0x206
+	uint8_t	SHA2[32];			//  12 0x208
 } ContentInfo;
 
 typedef struct
 {
-	u32 ID;					//	0	 0xB04
-	u16 Index;			//	4  0xB08
-	u16 Type;				//	6	 0xB0A
-	u64 Size;				//	8	 0xB0C
-	u8	SHA2[32];		//  16 0xB14
+	uint32_t ID;					//	0	 0xB04
+	uint16_t Index;			//	4  0xB08
+	uint16_t Type;				//	6	 0xB0A
+	uint64_t Size;				//	8	 0xB0C
+	uint8_t	SHA2[32];		//  16 0xB14
 } Content;
 
 typedef struct
 {
-	u32 SignatureType;		// 0x000
-	u8	Signature[0x100];	// 0x004
+	uint32_t SignatureType;		// 0x000
+	uint8_t	Signature[0x100];	// 0x004
 
-	u8	Padding0[0x3C];		// 0x104
-	u8	Issuer[0x40];			// 0x140
+	uint8_t	Padding0[0x3C];		// 0x104
+	uint8_t	Issuer[0x40];			// 0x140
 
-	u8	Version;					// 0x180
-	u8	CACRLVersion;			// 0x181
-	u8	SignerCRLVersion;	// 0x182
-	u8	Padding1;					// 0x183
+	uint8_t	Version;					// 0x180
+	uint8_t	CACRLVersion;			// 0x181
+	uint8_t	SignerCRLVersion;	// 0x182
+	uint8_t	Padding1;					// 0x183
 
-	u64	SystemVersion;		// 0x184
-	u64	TitleID;					// 0x18C 
-	u32	TitleType;				// 0x194 
-	u16	GroupID;					// 0x198 
-	u8	Reserved[62];			// 0x19A 
-	u32	AccessRights;			// 0x1D8
-	u16	TitleVersion;			// 0x1DC 
-	u16	ContentCount;			// 0x1DE 
-	u16 BootIndex;				// 0x1E0
-	u8	Padding3[2];			// 0x1E2 
-	u8	SHA2[32];					// 0x1E4
+	uint64_t	SystemVersion;		// 0x184
+	uint64_t	TitleID;					// 0x18C 
+	uint32_t	TitleType;				// 0x194 
+	uint16_t	GroupID;					// 0x198 
+	uint8_t	Reserved[62];			// 0x19A 
+	uint32_t	AccessRights;			// 0x1D8
+	uint16_t	TitleVersion;			// 0x1DC 
+	uint16_t	ContentCount;			// 0x1DE 
+	uint16_t BootIndex;				// 0x1E0
+	uint8_t	Padding3[2];			// 0x1E2 
+	uint8_t	SHA2[32];					// 0x1E4
 	
 	ContentInfo ContentInfos[64];
 
@@ -119,20 +108,20 @@ typedef struct
 
 struct FSTInfo
 {
-	u32 Unknown;
-	u32 Size;
-	u32 UnknownB;
-	u32 UnknownC[6];
+	uint32_t Unknown;
+	uint32_t Size;
+	uint32_t UnknownB;
+	uint32_t UnknownC[6];
 };
 struct FST
 {
-	u32 MagicBytes;
-	u32 Unknown;
-	u32 EntryCount;
+	uint32_t MagicBytes;
+	uint32_t Unknown;
+	uint32_t EntryCount;
 
-	u32 UnknownB[5];
+	uint32_t UnknownB[5];
 	
-	FSTInfo FSTInfos[];
+	struct FSTInfo FSTInfos[];
 };
 
 struct FEntry
@@ -141,41 +130,41 @@ struct FEntry
 	{
 		struct
 		{
-			u32 Type				:8;
-			u32 NameOffset	:24;
+			uint32_t Type				:8;
+			uint32_t NameOffset	:24;
 		};
-		u32 TypeName;
+		uint32_t TypeName;
 	};
 	union
 	{
 		struct		// File Entry
 		{
-			u32 FileOffset;
-			u32 FileLength;
+			uint32_t FileOffset;
+			uint32_t FileLength;
 		};
 		struct		// Dir Entry
 		{
-			u32 ParentOffset;
-			u32 NextOffset;
+			uint32_t ParentOffset;
+			uint32_t NextOffset;
 		};
-		u32 entry[2];
+		uint32_t entry[2];
 	};
 	unsigned short Flags;
 	unsigned short ContentID;
 };
 
-#define bs16(s) (u16)( ((s)>>8) | ((s)<<8) )
-#define bs32(s) (u32)( (((s)&0xFF0000)>>8) | (((s)&0xFF00)<<8) | ((s)>>24) | ((s)<<24) )
+#define bs16(s) (uint16_t)( ((s)>>8) | ((s)<<8) )
+#define bs32(s) (uint32_t)( (((s)&0xFF0000)>>8) | (((s)&0xFF00)<<8) | ((s)>>24) | ((s)<<24) )
 
-u32 bs24( u32 i )
+uint32_t bs24( uint32_t i )
 {
 	return ((i&0xFF0000)>>16) | ((i&0xFF)<<16) | (i&0x00FF00);
 }
-u64 bs64( u64 i )
+uint64_t bs64( uint64_t i )
 {
-	return ((u64)(bs32(i&0xFFFFFFFF))<<32) | (bs32(i>>32));
+	return ((uint64_t)(bs32(i&0xFFFFFFFF))<<32) | (bs32(i>>32));
 }
-char *ReadFile( const char *Name, u32 *Length )
+char *ReadFile( const char *Name, uint32_t *Length )
 {
 	FILE *in = fopen(Name,"rb");
 	if( in == NULL )
@@ -191,13 +180,13 @@ char *ReadFile( const char *Name, u32 *Length )
 
 	char *Data = new char[*Length];
 
-	u32 read = fread( Data, 1, *Length, in );
+	uint32_t read = fread( Data, 1, *Length, in );
 
 	fclose( in );
 
 	return Data;
 }
-void FileDump( const char *Name, void *Data, u32 Length )
+void FileDump( const char *Name, void *Data, uint32_t Length )
 {
 	if( Data == NULL )
 	{
@@ -229,11 +218,11 @@ static char ascii(char s)
   if(s > 0x7E) return '.';
   return s;
 }
-void hexdump(void *d, s32 len)
+void hexdump(void *d, int32_t len)
 {
-  u8 *data;
-  s32 i, off;
-  data = (u8*)d;
+  uint8_t *data;
+  int32_t i, off;
+  data = (uint8_t*)d;
   for (off=0; off<len; off += 16)
   {
     printf("%08x  ",off);
@@ -251,18 +240,18 @@ void hexdump(void *d, s32 len)
   }
 }
 #define	BLOCK_SIZE	0x10000
-void ExtractFileHash( FILE *in, u64 PartDataOffset, u64 FileOffset, u64 Size, char *FileName, u16 ContentID )
+void ExtractFileHash( FILE *in, uint64_t PartDataOffset, uint64_t FileOffset, uint64_t Size, char *FileName, uint16_t ContentID )
 {
 	char encdata[BLOCK_SIZE];
 	char decdata[BLOCK_SIZE];
-	u8 IV[16];
-	u8 hash[SHA_DIGEST_LENGTH];
-	u8 H0[SHA_DIGEST_LENGTH];
-	u8 Hashes[0x400];
+	uint8_t IV[16];
+	uint8_t hash[SHA_DIGEST_LENGTH];
+	uint8_t H0[SHA_DIGEST_LENGTH];
+	uint8_t Hashes[0x400];
 
-	u64 Wrote			= 0;
-	u64 WriteSize = 0xFC00;	// Hash block size
-	u64 Block			= (FileOffset / 0xFC00) & 0xF;
+	uint64_t Wrote			= 0;
+	uint64_t WriteSize = 0xFC00;	// Hash block size
+	uint64_t Block			= (FileOffset / 0xFC00) & 0xF;
 		
 	FILE *out = fopen( FileName, "wb" );
 	if( out == NULL )
@@ -272,8 +261,8 @@ void ExtractFileHash( FILE *in, u64 PartDataOffset, u64 FileOffset, u64 Size, ch
 		exit(0);
 	}
 
-	u64 roffset = FileOffset / 0xFC00 * BLOCK_SIZE;
-	u64 soffset = FileOffset - (FileOffset / 0xFC00 * 0xFC00);
+	uint64_t roffset = FileOffset / 0xFC00 * BLOCK_SIZE;
+	uint64_t soffset = FileOffset - (FileOffset / 0xFC00 * 0xFC00);
 
 	if( soffset+Size > WriteSize )
 		WriteSize = WriteSize - soffset;
@@ -287,17 +276,17 @@ void ExtractFileHash( FILE *in, u64 PartDataOffset, u64 FileOffset, u64 Size, ch
 		fread( encdata, sizeof( char ), BLOCK_SIZE, in);
 		
 		memset( IV, 0, sizeof(IV) );
-		IV[1] = (u8)ContentID;
-		AES_cbc_encrypt( (const u8 *)(encdata), (u8 *)Hashes, 0x400, &key, IV, AES_DECRYPT );		
+		IV[1] = (uint8_t)ContentID;
+		AES_cbc_encrypt( (const uint8_t *)(encdata), (uint8_t *)Hashes, 0x400, &key, IV, AES_DECRYPT );		
 		
 		memcpy( H0, Hashes+0x14*Block, SHA_DIGEST_LENGTH );
 
 		memcpy( IV, Hashes+0x14*Block, sizeof(IV) );
 		if( Block == 0 )
 			IV[1] ^= ContentID;
-		AES_cbc_encrypt( (const u8 *)(encdata+0x400), (u8 *)decdata, 0xFC00, &key, IV, AES_DECRYPT );
+		AES_cbc_encrypt( (const uint8_t *)(encdata+0x400), (uint8_t *)decdata, 0xFC00, &key, IV, AES_DECRYPT );
 
-		SHA1( (const u8 *)decdata, 0xFC00, hash );
+		SHA1( (const uint8_t *)decdata, 0xFC00, hash );
 		if( Block == 0 )
 			hash[1] ^= ContentID;
 		H0Count++;
@@ -330,18 +319,18 @@ void ExtractFileHash( FILE *in, u64 PartDataOffset, u64 FileOffset, u64 Size, ch
 }
 #undef BLOCK_SIZE
 #define	BLOCK_SIZE	0x8000
-void ExtractFile( FILE *in, u64 PartDataOffset, u64 FileOffset, u64 Size, char *FileName, u16 ContentID )
+void ExtractFile( FILE *in, uint64_t PartDataOffset, uint64_t FileOffset, uint64_t Size, char *FileName, uint16_t ContentID )
 {
 	char encdata[BLOCK_SIZE];
 	char decdata[BLOCK_SIZE];
-	u64 Wrote=0;
-	u64 Block			= (FileOffset / BLOCK_SIZE) & 0xF;
+	uint64_t Wrote=0;
+	uint64_t Block			= (FileOffset / BLOCK_SIZE) & 0xF;
 
 	//printf("PO:%08llX FO:%08llX FS:%llu\n", PartDataOffset, FileOffset, Size );
 
 	//calc real offset
-	u64 roffset = FileOffset / BLOCK_SIZE * BLOCK_SIZE;
-	u64 soffset = FileOffset - (FileOffset / BLOCK_SIZE * BLOCK_SIZE);
+	uint64_t roffset = FileOffset / BLOCK_SIZE * BLOCK_SIZE;
+	uint64_t soffset = FileOffset - (FileOffset / BLOCK_SIZE * BLOCK_SIZE);
 	//printf("Extracting:\"%s\" RealOffset:%08llX RealOffset:%08llX\n", FileName, roffset, soffset );
 	
 	FILE *out = fopen( FileName, "wb" );
@@ -351,11 +340,11 @@ void ExtractFile( FILE *in, u64 PartDataOffset, u64 FileOffset, u64 Size, char *
 		perror("");
 		exit(0);
 	}
-	u8 IV[16];
+	uint8_t IV[16];
 	memset( IV, 0, sizeof(IV) );
-	IV[1] = (u8)ContentID;
+	IV[1] = (uint8_t)ContentID;
 
-	u64 WriteSize = BLOCK_SIZE;
+	uint64_t WriteSize = BLOCK_SIZE;
 
 	if( soffset+Size > WriteSize )
 		WriteSize = WriteSize - soffset;
@@ -369,7 +358,7 @@ void ExtractFile( FILE *in, u64 PartDataOffset, u64 FileOffset, u64 Size, char *
 
 		fread( encdata, sizeof( char ), BLOCK_SIZE, in);
 		
-		AES_cbc_encrypt( (const u8 *)(encdata), (u8 *)decdata, BLOCK_SIZE, &key, IV, AES_DECRYPT);
+		AES_cbc_encrypt( (const uint8_t *)(encdata), (uint8_t *)decdata, BLOCK_SIZE, &key, IV, AES_DECRYPT);
 
 		Size -= fwrite( decdata+soffset, sizeof( char ), WriteSize, out);
 
@@ -384,7 +373,7 @@ void ExtractFile( FILE *in, u64 PartDataOffset, u64 FileOffset, u64 Size, char *
 	
 	fclose( out );
 }
-s32 main( s32 argc, char*argv[])
+int main( int argc, char*argv[])
 {
 	char str[1024];
 	
@@ -398,7 +387,7 @@ s32 main( s32 argc, char*argv[])
 		return EXIT_SUCCESS;
 	}
 
-	u32 TMDLen;
+	uint32_t TMDLen;
 	char *TMD = ReadFile( argv[1], &TMDLen );
 	if( TMD == nullptr )
 	{
@@ -406,7 +395,7 @@ s32 main( s32 argc, char*argv[])
 		return EXIT_FAILURE;
 	}
 	
-	u32 TIKLen;
+	uint32_t TIKLen;
 	char *TIK = ReadFile( argv[2], &TIKLen );
 	if( TIK == nullptr )
 	{
@@ -427,11 +416,11 @@ s32 main( s32 argc, char*argv[])
 
 	if( strcmp( TMD+0x140, "Root-CA00000003-CP0000000b" ) == 0 )
 	{
-		AES_set_decrypt_key( (const u8*)WiiUCommenKey, sizeof(WiiUCommenKey)*8, &key );
+		AES_set_decrypt_key( (const uint8_t*)WiiUCommenKey, sizeof(WiiUCommenKey)*8, &key );
 	}
 	else if( strcmp( TMD+0x140, "Root-CA00000004-CP00000010" ) == 0 )
 	{
-		AES_set_decrypt_key( (const u8*)WiiUCommenDevKey, sizeof(WiiUCommenDevKey)*8, &key );
+		AES_set_decrypt_key( (const uint8_t*)WiiUCommenDevKey, sizeof(WiiUCommenDevKey)*8, &key );
 	}
 	else
 	{
@@ -452,7 +441,7 @@ s32 main( s32 argc, char*argv[])
 	
 	sprintf( str, "%08X.app", bs32(tmd->Contents[0].ID) );
 	
-	u32 CNTLen;
+	uint32_t CNTLen;
 	char *CNT = ReadFile( str, &CNTLen );
 	if( CNT == (char*)NULL )
 	{
@@ -465,15 +454,15 @@ s32 main( s32 argc, char*argv[])
 		}
 	}
 
-	if( bs64(tmd->Contents[0].Size) != (u64)CNTLen )
+	if( bs64(tmd->Contents[0].Size) != (uint64_t)CNTLen )
 	{
-		printf("Size of content:%u is wrong: %u:%I64u\n", bs32(tmd->Contents[0].ID), CNTLen, bs64(tmd->Contents[0].Size) );
+		printf("Size of content:%u is wrong: %u:%I64u\n", bs32(tmd->Contents[0].ID), CNTLen, bs64(tmd->Contents[0].Size));
 		return EXIT_FAILURE;
 	}
 
-	AES_cbc_encrypt( (const u8 *)(CNT), (u8 *)(CNT), CNTLen, &key, (u8*)(iv), AES_DECRYPT );	
+	AES_cbc_encrypt( (const uint8_t *)(CNT), (uint8_t *)(CNT), CNTLen, &key, (uint8_t *)(iv), AES_DECRYPT );	
 
-	if( bs32(*(u32*)CNT) != 0x46535400 )
+	if( bs32(*(uint32_t*)CNT) != 0x46535400 )
 	{
 		sprintf( str, "%08X.dec", bs32(tmd->Contents[0].ID) );
 		FileDump( str, CNT, CNTLen );
@@ -490,19 +479,19 @@ s32 main( s32 argc, char*argv[])
 	
 	FEntry *fe = (FEntry*)(CNT+0x20+bs32(_fst->EntryCount)*0x20);
 	
-	u32 Entries = bs32(*(u32*)(CNT+0x20+bs32(_fst->EntryCount)*0x20+8));
-	u32 NameOff = 0x20 + bs32(_fst->EntryCount) * 0x20 + Entries * 0x10;
-	u32 DirEntries = 0;
+	uint32_t Entries = bs32(*(uint32_t*)(CNT+0x20+bs32(_fst->EntryCount)*0x20+8));
+	uint32_t NameOff = 0x20 + bs32(_fst->EntryCount) * 0x20 + Entries * 0x10;
+	uint32_t DirEntries = 0;
 	
 	printf("FST entries:%u\n", Entries );
 
 	char *Path = new char[1024];
-	s32 Entry[16];
-	s32 LEntry[16];
+	int32_t Entry[16];
+	int32_t LEntry[16];
 	
-	s32 level=0;
+	int32_t level=0;
 
-	for( u32 i=1; i < Entries; ++i )
+	for( uint32_t i=1; i < Entries; ++i )
 	{
 		if( level )
 		{
@@ -527,7 +516,7 @@ s32 main( s32 argc, char*argv[])
 		{
 			memset( Path, 0, 1024 );
 
-			for( s32 j=0; j<level; ++j )
+			for( int32_t j=0; j<level; ++j )
 			{
 				if(j)
 					Path[strlen(Path)] = '\\';
@@ -538,8 +527,8 @@ s32 main( s32 argc, char*argv[])
 				Path[strlen(Path)] = '\\';
 			memcpy( Path+strlen(Path), CNT + NameOff + bs24( fe[i].NameOffset ), strlen(CNT + NameOff + bs24( fe[i].NameOffset )) );
 
-			u32 CNTSize = bs32(fe[i].FileLength);
-			u64 CNTOff  = ((u64)bs32(fe[i].FileOffset));
+			uint32_t CNTSize = bs32(fe[i].FileLength);
+			uint64_t CNTOff  = ((uint64_t)bs32(fe[i].FileOffset));
 
 			if( (bs16(fe[i].Flags) & 4) == 0 )
 			{
@@ -548,9 +537,9 @@ s32 main( s32 argc, char*argv[])
 			
 			printf("Size:%07X Offset:0x%010llX CID:%02X U:%02X %s\n", CNTSize, CNTOff, bs16(fe[i].ContentID), bs16(fe[i].Flags), Path );
 
-			u32 ContFileID = bs32(tmd->Contents[bs16(fe[i].ContentID)].ID);
+			uint32_t ContFileID = bs32(tmd->Contents[bs16(fe[i].ContentID)].ID);
 			
-			sprintf( str, "%08X.app", ContFileID );
+			sprintf(str, "%08X.app", ContFileID);
 
 			if(!(fe[i].Type & 0x80))
 			{
