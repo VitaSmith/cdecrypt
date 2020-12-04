@@ -17,16 +17,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <direct.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
 #include <openssl\aes.h>
 #include <openssl\sha.h>
-#include <time.h>
-#include <vector>
-#include <direct.h>
-#include <ctype.h>
 
 #pragma comment(lib,"libcrypto.lib")
 
@@ -159,7 +157,7 @@ uint64_t bs64(uint64_t i)
     return ((uint64_t)(bs32(i & 0xFFFFFFFF)) << 32) | (bs32(i >> 32));
 }
 
-char* ReadFile(const char* Name, uint32_t* Length)
+char* ReadFromFile(const char* Name, uint32_t* Length)
 {
     FILE* in = fopen(Name, "rb");
     if (in == NULL)
@@ -171,7 +169,9 @@ char* ReadFile(const char* Name, uint32_t* Length)
 
     fseek(in, 0, 0);
 
-    char* Data = new char[*Length];
+    char* Data = malloc(*Length);
+    if (Data == NULL)
+        return NULL;
 
     fread(Data, 1, *Length, in);
 
@@ -376,14 +376,14 @@ int main(int argc, char* argv[])
     }
 
     uint32_t TMDLen;
-    char* TMD = ReadFile(argv[1], &TMDLen);
+    char* TMD = ReadFromFile(argv[1], &TMDLen);
     if (TMD == NULL) {
         perror("Failed to open tmd\n");
         return EXIT_FAILURE;
     }
 
     uint32_t TIKLen;
-    char* TIK = ReadFile(argv[2], &TIKLen);
+    char* TIK = ReadFromFile(argv[2], &TIKLen);
     if (TIK == NULL) {
         perror("Failed to open cetk\n");
         return EXIT_FAILURE;
@@ -423,10 +423,10 @@ int main(int argc, char* argv[])
     sprintf(str, "%08X.app", bs32(tmd->Contents[0].ID));
 
     uint32_t CNTLen;
-    char* CNT = ReadFile(str, &CNTLen);
+    char* CNT = ReadFromFile(str, &CNTLen);
     if (CNT == NULL) {
         sprintf(str, "%08X", bs32(tmd->Contents[0].ID));
-        CNT = ReadFile(str, &CNTLen);
+        CNT = ReadFromFile(str, &CNTLen);
         if (CNT == NULL) {
             printf("Failed to open content:%02X\n", bs32(tmd->Contents[0].ID));
             return EXIT_FAILURE;
@@ -446,21 +446,21 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    FST* _fst = (FST*)(CNT);
+    struct FST* _fst = (struct FST*)(CNT);
 
     printf("FSTInfo Entries:%u\n", bs32(_fst->EntryCount));
     if (bs32(_fst->EntryCount) > 90000) {
         return EXIT_FAILURE;
     }
 
-    FEntry* fe = (FEntry*)(CNT + 0x20 + bs32(_fst->EntryCount) * 0x20);
+    struct FEntry* fe = (struct FEntry*)(CNT + 0x20 + bs32(_fst->EntryCount) * 0x20);
 
     uint32_t Entries = bs32(*(uint32_t*)(CNT + 0x20 + bs32(_fst->EntryCount) * 0x20 + 8));
     uint32_t NameOff = 0x20 + bs32(_fst->EntryCount) * 0x20 + Entries * 0x10;
 
     printf("FST entries:%u\n", Entries);
 
-    char* Path = new char[1024];
+    char Path[1024] = { 0 };
     uint32_t Entry[16];
     uint32_t LEntry[16];
 
