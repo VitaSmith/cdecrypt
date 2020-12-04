@@ -38,7 +38,7 @@ unsigned char WiiUCommenKey[16] =
 #include <direct.h>
 #include <ctype.h>
 
-#pragma comment(lib,"libeay32.lib")
+#pragma comment(lib,"libcrypto.lib")
 
 typedef unsigned	__int64 u64;
 typedef signed		__int64 s64;
