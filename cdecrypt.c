@@ -263,7 +263,7 @@ static bool ExtractFileHash(FILE* in, uint64_t PartDataOffset, uint64_t FileOffs
             goto out;
         }
 
-        Size -= fwrite(decdata + soffset, sizeof(char), WriteSize, dst);
+        Size -= fwrite(decdata + soffset, sizeof(char), (size_t)WriteSize, dst);
 
         Wrote += WriteSize;
 
@@ -328,7 +328,7 @@ static bool ExtractFile(FILE* in, uint64_t PartDataOffset, uint64_t FileOffset, 
 
         aes_crypt_cbc(&ctx, AES_DECRYPT, BLOCK_SIZE, IV, (const uint8_t*)(encdata), (uint8_t*)decdata);
 
-        Size -= fwrite(decdata + soffset, sizeof(char), WriteSize, dst);
+        Size -= fwrite(decdata + soffset, sizeof(char), (size_t)WriteSize, dst);
 
         Wrote += WriteSize;
 

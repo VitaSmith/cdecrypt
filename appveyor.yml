@@ -1,0 +1,30 @@
+image: Visual Studio 2019
+
+skip_non_tags: true
+
+environment:
+  PROJECT_NAME: cdecrypt
+  FRIENDLY_NAME: cdecrypt
+
+build_script:
+  ps: |-
+      msbuild "$env:PROJECT_NAME.sln" /m /p:Configuration=Release /p:Platform=x86 /p:AppVersion=$env:APPVEYOR_REPO_TAG_NAME /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+
+after_build:
+  ps: |-
+      7z a "$env:PROJECT_NAME.zip" .\x86\Release\*.exe README.md LICENSE.txt
+      Get-FileHash "$env:PROJECT_NAME.zip" -Algorithm SHA256 | Format-List
+
+artifacts:
+  - path: $(PROJECT_NAME).zip
+    name: $(FRIENDLY_NAME)
+
+deploy:
+  release: $(APPVEYOR_REPO_TAG_NAME)
+  description: $(FRIENDLY_NAME) $(APPVEYOR_REPO_TAG_NAME)
+  provider: GitHub
+  auth_token:
+    secure: NJtYKU1LEV3Y13rBlM/EU93LwU7di/h2o/Sa0niABhIhFqD5Q2/jjbHYbS45IPhf
+  artifact: /.*\.zip/
+  draft: false
+  prerelease: false

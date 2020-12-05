@@ -566,7 +566,7 @@ int aes_setkey_dec(aes_context* ctx, const uint8_t* key, unsigned int keybits)
 
     ctx->nr = cty.nr;
 
-    SK = cty.rk + cty.nr * 4;
+    SK = cty.rk + (uintptr_t)cty.nr * 4;
 
     *RK++ = *SK++;
     *RK++ = *SK++;
