@@ -25,14 +25,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <openssl\aes.h>
-//#include <openssl\sha.h>
-
 #include "utf8.h"
 #include "util.h"
+#include "aes.h"
 #include "sha1.h"
-
-#pragma comment(lib,"libcrypto.lib")
 
 #define MAX_ENTRIES     90000
 #define MAX_LEVELS      16
@@ -43,7 +39,7 @@ uint8_t WiiUCommonDevKey[16] =
 uint8_t WiiUCommonKey[16] =
     { 0xD7, 0xB0, 0x04, 0x02, 0x65, 0x9B, 0xA2, 0xAB, 0xD2, 0xCB, 0x0D, 0xB2, 0x7F, 0xA2, 0xB6, 0x56 };
 
-AES_KEY key;
+aes_context ctx;
 uint8_t enc_title_key[16];
 uint8_t dec_title_key[16];
 uint8_t title_id[16];
@@ -244,18 +240,16 @@ static bool ExtractFileHash(FILE* in, uint64_t PartDataOffset, uint64_t FileOffs
 
         memset(IV, 0, sizeof(IV));
         IV[1] = (uint8_t)ContentID;
-        AES_cbc_encrypt((const uint8_t*)(encdata), (uint8_t*)Hashes, 0x400, &key, IV, AES_DECRYPT);
+        aes_crypt_cbc(&ctx, AES_DECRYPT, 0x400, IV, (const uint8_t*)(encdata), (uint8_t*)Hashes);
 
         memcpy(H0, Hashes + 0x14 * Block, SHA_DIGEST_LENGTH);
 
         memcpy(IV, Hashes + 0x14 * Block, sizeof(IV));
         if (Block == 0)
             IV[1] ^= ContentID;
-        AES_cbc_encrypt((const uint8_t*)(encdata + 0x400), (uint8_t*)decdata, 0xFC00, &key, IV, AES_DECRYPT);
-
+        aes_crypt_cbc(&ctx, AES_DECRYPT, 0xFC00, IV, (const uint8_t*)(encdata + 0x400), (uint8_t*)decdata);
 
         sha1((const uint8_t*)decdata, 0xFC00, hash);
-//        sha1(const uint8_t * input, size_t ilen, uint8_t output[SHA_DIGEST_LENGTH])
 
         if (Block == 0)
             hash[1] ^= ContentID;
@@ -332,7 +326,7 @@ static bool ExtractFile(FILE* in, uint64_t PartDataOffset, uint64_t FileOffset, 
 
         fread(encdata, sizeof(char), BLOCK_SIZE, in);
 
-        AES_cbc_encrypt((const uint8_t*)(encdata), (uint8_t*)decdata, BLOCK_SIZE, &key, IV, AES_DECRYPT);
+        aes_crypt_cbc(&ctx, AES_DECRYPT, BLOCK_SIZE, IV, (const uint8_t*)(encdata), (uint8_t*)decdata);
 
         Size -= fwrite(decdata + soffset, sizeof(char), WriteSize, dst);
 
@@ -388,10 +382,9 @@ int main_utf8(int argc, char** argv)
     printf("Content Count:%u\n", getbe16(&tmd->ContentCount));
 
     if (strcmp((char*)TMD + 0x140, "Root-CA00000003-CP0000000b") == 0) {
-        AES_set_decrypt_key((const uint8_t*)WiiUCommonKey, sizeof(WiiUCommonKey) * 8, &key);
-    }
-    else if (strcmp((char*)TMD + 0x140, "Root-CA00000004-CP00000010") == 0) {
-        AES_set_decrypt_key((const uint8_t*)WiiUCommonDevKey, sizeof(WiiUCommonDevKey) * 8, &key);
+        aes_setkey_dec(&ctx, (const uint8_t*)WiiUCommonKey, sizeof(WiiUCommonKey) * 8);
+    } else if (strcmp((char*)TMD + 0x140, "Root-CA00000004-CP00000010") == 0) {
+        aes_setkey_dec(&ctx, (const uint8_t*)WiiUCommonDevKey, sizeof(WiiUCommonDevKey) * 8);
     } else {
         fprintf(stderr, "ERROR: Unknown Root type: \"%s\"\n", TMD + 0x140);
         goto out;
@@ -402,8 +395,8 @@ int main_utf8(int argc, char** argv)
     memcpy(title_id, TMD + 0x18C, 8);
     memcpy(enc_title_key, TIK + 0x1BF, 16);
 
-    AES_cbc_encrypt(enc_title_key, dec_title_key, sizeof(dec_title_key), &key, title_id, AES_DECRYPT);
-    AES_set_decrypt_key(dec_title_key, sizeof(dec_title_key) * 8, &key);
+    aes_crypt_cbc(&ctx, AES_DECRYPT, sizeof(dec_title_key), title_id, enc_title_key, dec_title_key);
+    aes_setkey_dec(&ctx, dec_title_key, sizeof(dec_title_key) * 8);
 
     char iv[16];
     memset(iv, 0, sizeof(iv));
@@ -426,7 +419,7 @@ int main_utf8(int argc, char** argv)
         goto out;
     }
 
-    AES_cbc_encrypt((const uint8_t*)(CNT), (uint8_t*)(CNT), CNTLen, &key, (uint8_t*)(iv), AES_DECRYPT);
+    aes_crypt_cbc(&ctx, AES_DECRYPT, CNTLen, (uint8_t*)(iv), (const uint8_t*)(CNT), (uint8_t*)(CNT));
 
     if (getbe32(CNT) != FST_MAGIC) {
         sprintf(str, "%08X.dec", getbe32(&tmd->Contents[0].ID));

@@ -29,7 +29,7 @@
 
 #include <string.h>
 
-  /* Implementation that should never be optimized out by the compiler */
+/* Implementation that should never be optimized out by the compiler */
 static void zeroize(void* v, size_t n) {
     volatile uint8_t* p = (uint8_t*)v; while (n--) *p++ = 0;
 }
@@ -48,8 +48,8 @@ static void zeroize(void* v, size_t n) {
 #endif
 
 #ifndef PUT_UINT32_BE
-#define PUT_UINT32_BE(n,b,i)                            \
-{                                                       \
+#define PUT_UINT32_BE(n,b,i)                      \
+{                                                 \
     (b)[(i)    ] = (uint8_t) ( (n) >> 24 );       \
     (b)[(i) + 1] = (uint8_t) ( (n) >> 16 );       \
     (b)[(i) + 2] = (uint8_t) ( (n) >>  8 );       \
@@ -336,88 +336,3 @@ void sha1(const uint8_t* input, size_t ilen, uint8_t output[SHA_DIGEST_LENGTH])
     sha1_finish(&ctx, output);
     sha1_free(&ctx);
 }
-
-#if defined(MBEDTLS_SELF_TEST)
-/*
- * FIPS-180-1 test vectors
- */
-static const uint8_t sha1_test_buf[3][57] =
-{
-    { "abc" },
-    { "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq" },
-    { "" }
-};
-
-static const int sha1_test_buflen[3] =
-{
-    3, 56, 1000
-};
-
-static const uint8_t sha1_test_sum[3][20] =
-{
-    { 0xA9, 0x99, 0x3E, 0x36, 0x47, 0x06, 0x81, 0x6A, 0xBA, 0x3E,
-      0x25, 0x71, 0x78, 0x50, 0xC2, 0x6C, 0x9C, 0xD0, 0xD8, 0x9D },
-    { 0x84, 0x98, 0x3E, 0x44, 0x1C, 0x3B, 0xD2, 0x6E, 0xBA, 0xAE,
-      0x4A, 0xA1, 0xF9, 0x51, 0x29, 0xE5, 0xE5, 0x46, 0x70, 0xF1 },
-    { 0x34, 0xAA, 0x97, 0x3C, 0xD4, 0xC4, 0xDA, 0xA4, 0xF6, 0x1E,
-      0xEB, 0x2B, 0xDB, 0xAD, 0x27, 0x31, 0x65, 0x34, 0x01, 0x6F }
-};
-
-/*
- * Checkup routine
- */
-int sha1_self_test(int verbose)
-{
-    int i, j, buflen, ret = 0;
-    uint8_t buf[1024];
-    uint8_t sha1sum[20];
-    sha1_context ctx;
-
-    sha1_init(&ctx);
-
-    /*
-     * SHA-1
-     */
-    for (i = 0; i < 3; i++)
-    {
-        if (verbose != 0)
-            printf("  SHA-1 test #%d: ", i + 1);
-
-        sha1_starts(&ctx);
-
-        if (i == 2)
-        {
-            memset(buf, 'a', buflen = 1000);
-
-            for (j = 0; j < 1000; j++)
-                sha1_update(&ctx, buf, buflen);
-        }
-        else
-            sha1_update(&ctx, sha1_test_buf[i],
-                sha1_test_buflen[i]);
-
-        sha1_finish(&ctx, sha1sum);
-
-        if (memcmp(sha1sum, sha1_test_sum[i], 20) != 0)
-        {
-            if (verbose != 0)
-                printf("failed\n");
-
-            ret = 1;
-            goto exit;
-        }
-
-        if (verbose != 0)
-            printf("passed\n");
-    }
-
-    if (verbose != 0)
-        printf("\n");
-
-exit:
-    sha1_free(&ctx);
-
-    return(ret);
-}
-
-#endif /* MBEDTLS_SELF_TEST */

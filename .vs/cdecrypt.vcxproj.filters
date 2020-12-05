@@ -20,6 +20,9 @@
     <ClCompile Include="..\sha1.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\aes.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\utf8.h">
@@ -29,6 +32,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\sha1.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\aes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
