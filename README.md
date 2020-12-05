@@ -1,8 +1,8 @@
 # cdecrypt
 
 [![Build status](https://img.shields.io/appveyor/ci/VitaSmith/cdecrypt.svg?style=flat-square)](https://ci.appveyor.com/project/VitaSmith/cdecrypt)
-[![Github stats](https://img.shields.io/github/downloads/VitaSmith/gust_tools/total.svg?style=flat-square)](https://github.com/VitaSmith/gust_tools/releases)
-[![Latest release](https://img.shields.io/github/release-pre/VitaSmith/gust_tools?style=flat-square)](https://github.com/VitaSmith/gust_tools/releases)
+[![Github stats](https://img.shields.io/github/downloads/VitaSmith/cdecrypt/total.svg?style=flat-square)](https://github.com/VitaSmith/cdecrypt/releases)
+[![Latest release](https://img.shields.io/github/release-pre/VitaSmith/cdecrypt?style=flat-square)](https://github.com/VitaSmith/cdecrypt/releases)
 
 A commandline utility that can be used to decrypt Wii U NUS content files.
 
