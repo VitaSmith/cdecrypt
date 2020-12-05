@@ -19,7 +19,7 @@
 */
 
 #include <assert.h>
-#include <direct.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -231,7 +231,7 @@ static bool ExtractFileHash(FILE* in, uint64_t PartDataOffset, uint64_t FileOffs
     if (soffset + Size > WriteSize)
         WriteSize = WriteSize - soffset;
 
-    _fseeki64(in, PartDataOffset + roffset, SEEK_SET);
+    fseek64(in, PartDataOffset + roffset, SEEK_SET);
     while (Size > 0) {
         if (WriteSize > Size)
             WriteSize = Size;
@@ -318,7 +318,7 @@ static bool ExtractFile(FILE* in, uint64_t PartDataOffset, uint64_t FileOffset, 
     if (soffset + Size > WriteSize)
         WriteSize = WriteSize - soffset;
 
-    _fseeki64(in, PartDataOffset + roffset, SEEK_SET);
+    fseek64(in, PartDataOffset + roffset, SEEK_SET);
 
     while (Size > 0) {
         if (WriteSize > Size)
@@ -414,7 +414,7 @@ int main_utf8(int argc, char** argv)
     }
 
     if (getbe64(&tmd->Contents[0].Size) != (uint64_t)CNTLen) {
-        fprintf(stderr, "ERROR: Size of content %u is wrong: %u:%I64u\n",
+        fprintf(stderr, "ERROR: Size of content %u is wrong: %u:%" PRIu64 "\n",
             getbe32(&tmd->Contents[0].ID), CNTLen, getbe64(&tmd->Contents[0].Size));
         goto out;
     }
@@ -468,13 +468,13 @@ int main_utf8(int argc, char** argv)
 
             for (uint32_t j = 0; j < level; j++) {
                 if (j)
-                    Path[strlen(Path)] = '\\';
+                    Path[strlen(Path)] = PATH_SEP;
                 Offset = getbe32(&fe[Entry[j]].TypeName) & 0x00FFFFFF;
                 memcpy(Path + strlen(Path), CNT + NameOff + Offset, strlen((char*)CNT + NameOff + Offset));
                 create_path(Path);
             }
             if (level > 0)
-                Path[strlen(Path)] = '\\';
+                Path[strlen(Path)] = PATH_SEP;
             Offset = getbe32(&fe[i].TypeName) & 0x00FFFFFF;
             memcpy(Path + strlen(Path), CNT + NameOff + Offset, strlen((char*)CNT + NameOff + Offset));
 
@@ -484,7 +484,7 @@ int main_utf8(int argc, char** argv)
             if ((getbe16(&fe[i].Flags) & 4) == 0)
                 CNTOff <<= 5;
 
-            printf("Size:%07X Offset:0x%010llX CID:%02X U:%02X %s\n", CNTSize, CNTOff,
+            printf("Size:%07X Offset:0x%010" PRIx64 " CID:%02X U:%02X %s\n", CNTSize, CNTOff,
                 getbe16(&fe[i].ContentID), getbe16(&fe[i].Flags), Path);
 
             uint32_t ContFileID = getbe32(&tmd->Contents[getbe16(&fe[i].ContentID)].ID);
