@@ -56,6 +56,10 @@
 #define PATH_SEP '/'
 #endif
 
+#ifndef MAX_PATH
+#define MAX_PATH 256
+#endif
+
 #ifndef min
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 #endif
@@ -206,6 +210,8 @@ size_t get_trailing_slash(const char* path);
 bool is_file(const char* path);
 bool is_directory(const char* path);
 
-uint32_t read_file(const char* path, uint8_t** buf);
+uint32_t read_file_max(const char* path, uint8_t** buf, uint32_t max_size);
+#define read_file(path, buf) read_file_max(path, buf, 0)
+uint64_t get_file_size(const char* path);
 void create_backup(const char* path);
 bool write_file(const uint8_t* buf, const uint32_t size, const char* path, const bool backup);

@@ -94,7 +94,7 @@ size_t get_trailing_slash(const char* path)
     return (i == 0) ? 0: i + 1;
 }
 
-uint32_t read_file(const char* path, uint8_t** buf)
+uint32_t read_file_max(const char* path, uint8_t** buf, uint32_t max_size)
 {
     FILE* file = fopen_utf8(path, "rb");
     if (file == NULL) {
@@ -105,6 +105,8 @@ uint32_t read_file(const char* path, uint8_t** buf)
     fseek(file, 0L, SEEK_END);
     uint32_t size = (uint32_t)ftell(file);
     fseek(file, 0L, SEEK_SET);
+    if (max_size != 0)
+        size = min(size, max_size);
 
     *buf = calloc(size, 1);
     if (*buf == NULL) {
@@ -121,6 +123,20 @@ out:
         free(*buf);
         *buf = NULL;
     }
+    return size;
+}
+
+uint64_t get_file_size(const char* path)
+{
+    FILE* file = fopen_utf8(path, "rb");
+    if (file == NULL) {
+        fprintf(stderr, "ERROR: Can't open '%s'\n", path);
+        return 0;
+    }
+
+    fseek(file, 0L, SEEK_END);
+    uint64_t size = ftell64(file);
+    fclose(file);
     return size;
 }
 

@@ -32,7 +32,11 @@
 
 #define MAX_ENTRIES     90000
 #define MAX_LEVELS      16
-#define FST_MAGIC       ((uint32_t)'FST\0')
+#define FST_MAGIC       0x46535400              // 'FST\0'
+// We use part of the root cert name used by TMD/TIK to identify them
+#define TMD_MAGIC       0x4350303030303030ULL   // 'CP000000'
+#define TIK_MAGIC       0x5853303030303030ULL   // 'XS000000'
+#define T_MAGIC_OFFSET  0x0150
 #define HASH_BLOCK_SIZE 0xFC00
 #define HASHES_SIZE     0x0400
 
@@ -51,7 +55,7 @@ uint64_t        h0_fail  = 0;
 
 enum ContentType
 {
-    CONTENT_REQUIRED = (1 << 0),    // not sure
+    CONTENT_REQUIRED = (1 << 0),    // Not sure
     CONTENT_SHARED   = (1 << 15),
     CONTENT_OPTIONAL = (1 << 14),
 };
@@ -348,24 +352,78 @@ out:
 int main_utf8(int argc, char** argv)
 {
     int r = EXIT_FAILURE;
-    char str[1024];
+    char str[MAX_PATH], *tmd_path = NULL, *tik_path = NULL;
     FILE* src = NULL;
     TitleMetaData* tmd = NULL;
     uint8_t *tik = NULL, *cnt = NULL;
 
-    if (argc != 3) {
-        printf("%s %s (c) 2013-2015 crediar, (c) 2020 VitaSmith\n\n"
-            "Usage: %s <title.tmd> <title.tik>\n\n"
-            "Decrypt Wii U NUS content files.\n\n",
+    if (argc < 2) {
+        printf("%s %s - Wii U NUS content file decrypter\n"
+            "Copyright (c) 2013-2015 crediar, Copyright (c) 2020 VitaSmith\n"
+            "Visit https://github.com/VitaSmith/cdecrypt for official source and downloads.\n\n"
+            "Usage: %s <file or directory>\n\n"
+            "This program is free software; you can redistribute it and/or modify it under\n"
+            "the terms of the GNU General Public License as published by the Free Software\n"
+            "Foundation; either version 3 of the License or any later version.\n",
             appname(argv[0]), APP_VERSION_STR, appname(argv[0]));
         return EXIT_SUCCESS;
     }
 
-    uint32_t tmd_len = read_file(argv[1], (uint8_t**)&tmd);
+    if (!is_directory(argv[1])) {
+        uint8_t* buf = NULL;
+        uint32_t size = read_file_max(argv[1], &buf, T_MAGIC_OFFSET + sizeof(uint64_t));
+        if (size == 0)
+            goto out;
+        if (size >= T_MAGIC_OFFSET + sizeof(uint64_t)) {
+            uint64_t magic = getbe64(&buf[T_MAGIC_OFFSET]);
+            free(buf);
+            if (magic == TMD_MAGIC) {
+                tmd_path = strdup(argv[1]);
+                if (argc < 3) {
+                    tik_path = strdup(argv[1]);
+                    tik_path[strlen(tik_path) - 2] = 'i';
+                    tik_path[strlen(tik_path) - 1] = 'k';
+                }
+                else {
+                    tik_path = strdup(argv[2]);
+                }
+            } else if (magic == TIK_MAGIC) {
+                tik_path = strdup(argv[1]);
+                if (argc < 3) {
+                    tmd_path = strdup(argv[1]);
+                    tmd_path[strlen(tik_path) - 2] = 'm';
+                    tmd_path[strlen(tik_path) - 1] = 'd';
+                }
+                else {
+                    tmd_path = strdup(argv[2]);
+                }
+            }
+        }
+
+        // File too small or without expected magic
+        if ((tmd_path == NULL) || (tik_path == NULL)) {
+            argv[1][get_trailing_slash(argv[1])] = 0;
+            if (argv[1][0] == 0) {
+                argv[1][0] = '.';
+                argv[1][1] = 0;
+            }
+        }
+    }
+
+    // If the condition below is true, argv[1] is a directory
+    if ((tmd_path == NULL) || (tik_path == NULL)) {
+        size_t size = strlen(argv[1]);
+        tmd_path = calloc(size + 10, 1);
+        tik_path = calloc(size + 10, 1);
+        sprintf(tmd_path, "%s%ctitle.tmd", argv[1], PATH_SEP);
+        sprintf(tik_path, "%s%ctitle.tik", argv[1], PATH_SEP);
+    }
+
+    uint32_t tmd_len = read_file(tmd_path, (uint8_t**)&tmd);
     if (tmd_len == 0)
         goto out;
 
-    uint32_t tik_len = read_file(argv[2], &tik);
+    uint32_t tik_len = read_file(tik_path, &tik);
     if (tik_len == 0)
         goto out;
 
@@ -512,6 +570,8 @@ out:
     free(tmd);
     free(tik);
     free(cnt);
+    free(tmd_path);
+    free(tik_path);
     if (src != NULL)
         fclose(src);
     return r;
