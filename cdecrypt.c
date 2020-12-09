@@ -400,21 +400,19 @@ int main_utf8(int argc, char** argv)
             }
         }
 
-        // File too small or without expected magic
-        if ((tmd_path == NULL) || (tik_path == NULL)) {
-            argv[1][get_trailing_slash(argv[1])] = 0;
-            if (argv[1][0] == 0) {
-                argv[1][0] = '.';
-                argv[1][1] = 0;
-            }
+        // We'll need the current path for locating files, which we set in argv[1]
+        argv[1][get_trailing_slash(argv[1])] = 0;
+        if (argv[1][0] == 0) {
+            argv[1][0] = '.';
+            argv[1][1] = 0;
         }
     }
 
     // If the condition below is true, argv[1] is a directory
     if ((tmd_path == NULL) || (tik_path == NULL)) {
         size_t size = strlen(argv[1]);
-        tmd_path = calloc(size + 10, 1);
-        tik_path = calloc(size + 10, 1);
+        tmd_path = calloc(size + 16, 1);
+        tik_path = calloc(size + 16, 1);
         sprintf(tmd_path, "%s%ctitle.tmd", argv[1], PATH_SEP);
         sprintf(tik_path, "%s%ctitle.tik", argv[1], PATH_SEP);
     }
@@ -455,11 +453,11 @@ int main_utf8(int argc, char** argv)
     uint8_t iv[16];
     memset(iv, 0, sizeof(iv));
 
-    sprintf(str, "%08X.app", getbe32(&tmd->Contents[0].ID));
+    sprintf(str, "%s%c%08X.app", argv[1], PATH_SEP, getbe32(&tmd->Contents[0].ID));
 
     uint32_t cnt_len = read_file(str, &cnt);
     if (cnt_len == 0) {
-        sprintf(str, "%08X", getbe32(&tmd->Contents[0].ID));
+        sprintf(str, "%s%c%08X", argv[1], PATH_SEP, getbe32(&tmd->Contents[0].ID));
         cnt_len = read_file(str, &cnt);
         if (cnt_len == 0) {
             fprintf(stderr, "ERROR: Failed to open content: %02X\n", getbe32(&tmd->Contents[0].ID));
@@ -476,7 +474,7 @@ int main_utf8(int argc, char** argv)
     aes_crypt_cbc(&ctx, AES_DECRYPT, cnt_len, iv, cnt, cnt);
 
     if (getbe32(cnt) != FST_MAGIC) {
-        sprintf(str, "%08X.dec", getbe32(&tmd->Contents[0].ID));
+        sprintf(str, "%s%c%08X.dec", argv[1], PATH_SEP, getbe32(&tmd->Contents[0].ID));
         fprintf(stderr, "ERROR: Unexpected content magic. Dumping decrypted file as '%s'.\n", str);
         file_dump(str, cnt, cnt_len);
         goto out;
@@ -497,7 +495,7 @@ int main_utf8(int argc, char** argv)
 
     printf("FST entries: %u\n", entries);
 
-    char path[1024] = { 0 };
+    char path[MAX_PATH] = { 0 };
     uint32_t entry[16];
     uint32_t l_entry[16];
 
@@ -519,16 +517,16 @@ int main_utf8(int argc, char** argv)
         } else {
             uint32_t offset;
             memset(path, 0, sizeof(path));
+            strcpy(path, argv[1]);
 
+            size_t short_path = strlen(path) + 1;
             for (uint32_t j = 0; j < level; j++) {
-                if (j > 0)
-                    path[strlen(path)] = PATH_SEP;
+                path[strlen(path)] = PATH_SEP;
                 offset = getbe32(&fe[entry[j]].TypeName) & 0x00FFFFFF;
                 memcpy(path + strlen(path), cnt + name_offset + offset, strlen((char*)cnt + name_offset + offset));
                 create_path(path);
             }
-            if (level > 0)
-                path[strlen(path)] = PATH_SEP;
+            path[strlen(path)] = PATH_SEP;
             offset = getbe32(&fe[i].TypeName) & 0x00FFFFFF;
             memcpy(path + strlen(path), cnt + name_offset + offset, strlen((char*)cnt + name_offset + offset));
 
@@ -537,15 +535,15 @@ int main_utf8(int argc, char** argv)
                 cnt_offset <<= 5;
 
             printf("Size:%07X Offset:0x%010" PRIx64 " CID:%02X U:%02X %s\n", getbe32(&fe[i].FileLength),
-                cnt_offset, getbe16(&fe[i].ContentID), getbe16(&fe[i].Flags), path);
+                cnt_offset, getbe16(&fe[i].ContentID), getbe16(&fe[i].Flags), &path[short_path]);
 
             uint32_t cnt_file_id = getbe32(&tmd->Contents[getbe16(&fe[i].ContentID)].ID);
-            sprintf(str, "%08X.app", cnt_file_id);
+            sprintf(str, "%s%c%08X.app", argv[1], PATH_SEP, cnt_file_id);
 
             if (!(fe[i].Type & 0x80)) {
                 src = fopen_utf8(str, "rb");
                 if (src == NULL) {
-                    sprintf(str, "%08X", cnt_file_id);
+                    sprintf(str, "%s%c%08X", argv[1], PATH_SEP, cnt_file_id);
                     src = fopen_utf8(str, "rb");
                     if (src == NULL) {
                         fprintf(stderr, "ERROR: Could not open: '%s'\n", str);
