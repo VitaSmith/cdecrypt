@@ -352,14 +352,14 @@ out:
 int main_utf8(int argc, char** argv)
 {
     int r = EXIT_FAILURE;
-    char str[MAX_PATH], *tmd_path = NULL, *tik_path = NULL;
+    char str[PATH_MAX], *tmd_path = NULL, *tik_path = NULL;
     FILE* src = NULL;
     TitleMetaData* tmd = NULL;
     uint8_t *tik = NULL, *cnt = NULL;
 
     if (argc < 2) {
         printf("%s %s - Wii U NUS content file decrypter\n"
-            "Copyright (c) 2013-2015 crediar, Copyright (c) 2020 VitaSmith\n"
+            "Copyright (c) 2020 VitaSmith, Copyright (c) 2013-2015 crediar\n"
             "Visit https://github.com/VitaSmith/cdecrypt for official source and downloads.\n\n"
             "Usage: %s <file or directory>\n\n"
             "This program is free software; you can redistribute it and/or modify it under\n"
@@ -495,7 +495,7 @@ int main_utf8(int argc, char** argv)
 
     printf("FST entries: %u\n", entries);
 
-    char path[MAX_PATH] = { 0 };
+    char path[PATH_MAX] = { 0 };
     uint32_t entry[16];
     uint32_t l_entry[16];
 

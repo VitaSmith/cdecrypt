@@ -4,11 +4,12 @@ skip_non_tags: true
 
 environment:
   PROJECT_NAME: cdecrypt
-  FRIENDLY_NAME: cdecrypt
+  FRIENDLY_NAME: CDecrypt
 
 build_script:
   ps: |-
-      msbuild "$env:PROJECT_NAME.sln" /m /p:Configuration=Release /p:Platform=x86 /p:AppVersion=$env:APPVEYOR_REPO_TAG_NAME /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+      $env:APPVEYOR_REPO_TAG_NAME -match 'v(\d+)\.(\d+)'
+      msbuild "$env:PROJECT_NAME.sln" /m /p:Configuration=Release /p:Platform=x86 /p:AppVersion=$env:APPVEYOR_REPO_TAG_NAME /p:AppMajor=$($matches[1]) /p:AppMinor=$($matches[2]) /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 after_build:
   ps: |-

@@ -1,0 +1,58 @@
+#pragma code_page(65001)
+
+#include <winver.h>
+#include <ntdef.h>
+
+#ifdef RC_INVOKED
+
+#define _TO_STRING(x)                   #x
+#define TO_STRING(x)                    _TO_STRING(x)
+
+#ifndef APP_DESC
+#define APP_DESC                        ""
+#endif
+
+#ifndef APP_MAJOR
+#define APP_MAJOR                       0
+#endif
+
+#ifndef APP_MINOR
+#define APP_MINOR                       0
+#endif
+
+#ifndef APP_NAME
+#define APP_NAME                        ""
+#endif
+
+#ifndef EXE_NAME
+#define EXE_NAME                        ""
+#endif
+
+VS_VERSION_INFO VERSIONINFO
+  FILEFLAGS                             0x0L
+  FILEFLAGSMASK                         0x3FL
+  FILEOS                                0x40004L
+  FILESUBTYPE                           0x0L
+  FILETYPE                              0x1L
+  FILEVERSION                           APP_MAJOR,APP_MINOR,0,0
+  PRODUCTVERSION                        APP_MAJOR,APP_MINOR,0,0
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "FileDescription",    APP_DESC
+            VALUE "FileVersion",        TO_STRING(APP_MAJOR) "," TO_STRING(APP_MINOR) ",0,0"
+            VALUE "InternalName",       APP_NAME
+            VALUE "LegalCopyright",     "Copyright © 2020 VitaSmith, Copyright © 2013-2015 crediar"
+            VALUE "OriginalFilename",   EXE_NAME
+            VALUE "ProductName",        APP_NAME
+            VALUE "ProductVersion",     TO_STRING(APP_MAJOR) "," TO_STRING(APP_MINOR) ",0,0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x9, 1200
+    END
+END
+#endif

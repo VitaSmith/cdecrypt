@@ -56,8 +56,8 @@
 #define PATH_SEP '/'
 #endif
 
-#ifndef MAX_PATH
-#define MAX_PATH 256
+#ifndef PATH_MAX
+#define PATH_MAX 1024
 #endif
 
 #ifndef min
