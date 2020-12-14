@@ -411,6 +411,8 @@ int main_utf8(int argc, char** argv)
     // If the condition below is true, argv[1] is a directory
     if ((tmd_path == NULL) || (tik_path == NULL)) {
         size_t size = strlen(argv[1]);
+        free(tmd_path);
+        free(tik_path);
         tmd_path = calloc(size + 16, 1);
         tik_path = calloc(size + 16, 1);
         sprintf(tmd_path, "%s%ctitle.tmd", argv[1], PATH_SEP);

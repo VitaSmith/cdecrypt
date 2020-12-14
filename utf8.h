@@ -26,6 +26,7 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <wchar.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -35,6 +36,7 @@
 #if defined(_WIN32)
 #include <windows.h>
 #define stat64 _stat64
+#define stat64_t stat64
 
 static __inline char* utf16_to_utf8(const wchar_t* str16)
 {
@@ -112,6 +114,7 @@ static __inline int stat64_utf8(const char* path, struct stat64* buffer)
 #define CALL_MAIN int wmain(int argc, wchar_t** argv16) {   \
     SetConsoleOutputCP(CP_UTF8);                            \
     char** argv = calloc(argc, sizeof(char*));              \
+    if (argv == NULL) return EXIT_FAILURE;                  \
     for (int i = 0; i < argc; i++)                          \
         argv[i] = utf16_to_utf8(argv16[i]);                 \
     int r = main_utf8(argc, argv);                          \
@@ -124,7 +127,13 @@ static __inline int stat64_utf8(const char* path, struct stat64* buffer)
 #else
 #define fopen_utf8 fopen
 #define rename_utf8 rename
+#if defined(__APPLE__)
+#define stat64_utf8 stat
+#define stat64_t stat
+#else
 #define stat64_utf8 stat64
+#define stat64_t stat64
+#endif
 #define CALL_MAIN int main(int argc, char** argv) {         \
     return main_utf8(argc, argv);                           \
 }

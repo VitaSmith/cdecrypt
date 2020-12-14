@@ -22,6 +22,9 @@
 #include <crtdbg.h>
 #endif
 
+#if defined(__APPLE__)
+#include <libgen.h>
+#endif
 #include <stdbool.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -50,8 +53,13 @@
 #define CREATE_DIR(path) CreateDirectoryA(path, NULL)
 #define PATH_SEP '\\'
 #else
+#if defined(__APPLE__)
+#define ftell64 ftello
+#define fseek64 fseeko
+#else
 #define ftell64 ftello64
 #define fseek64 fseeko64
+#endif
 #define CREATE_DIR(path) (mkdir(path, 0755) == 0)
 #define PATH_SEP '/'
 #endif

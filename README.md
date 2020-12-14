@@ -16,7 +16,7 @@ want to explore or modify the content of the Wii U applications they own.
 Unlike other clones, this version of cdecrypt has **no** external dependencies
 such as OpenSSL libraries and whatnot: A single executable file is all you need.
 It also supports international characters, does not need to reside in the same
-directory as the NUS content, and can be compiled for Linux.
+directory as the NUS content, and can be compiled for Linux or macOS.
 
 ### Usage
 
