@@ -497,6 +497,9 @@ int main_utf8(int argc, char** argv)
 
     printf("FST entries: %u\n", entries);
 
+    char* dst_dir = ((argc <= 2) || is_file(argv[2])) ? argv[1] : argv[2];
+    printf("Extracting to directory: '%s'\n", dst_dir);
+    create_path(dst_dir);
     char path[PATH_MAX] = { 0 };
     uint32_t entry[16];
     uint32_t l_entry[16];
@@ -519,7 +522,7 @@ int main_utf8(int argc, char** argv)
         } else {
             uint32_t offset;
             memset(path, 0, sizeof(path));
-            strcpy(path, argv[1]);
+            strcpy(path, dst_dir);
 
             size_t short_path = strlen(path) + 1;
             for (uint32_t j = 0; j < level; j++) {

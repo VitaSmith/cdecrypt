@@ -75,7 +75,7 @@ bool is_directory(const char* path)
 
 char* change_extension(const char* path, const char* extension)
 {
-    static char new_path[256];
+    static char new_path[PATH_MAX];
     strncpy(new_path, basename((char*)path), sizeof(new_path) - 1);
     for (size_t i = 0; i < sizeof(new_path); i++) {
         if (new_path[i] == '.')

@@ -21,8 +21,15 @@ directory as the NUS content, and can be compiled for Linux or macOS.
 ### Usage
 
 ```
-cdecrypt <NUS file or directory>
+cdecrypt <NUS file or directory> [<target directory or existing file>]
 ```
 
-The content is extracted into the same directory where the NUS files reside.  
-On Windows, you can also drag and drop a directory/file directly onto `cdecrypt.exe`.
+If only one parameter is specified, the content is extracted into the same
+directory where the NUS files reside. If an existing file is provided as the
+second parameter, it is ignored (to preserve compatibility with the previous
+versions of CDecrypt). If the second parameter is not an existing file, then
+it is used as the target directory to extract files in, with any intermediate
+directories created if needed.
+
+Note that on Windows, you can drag and drop a directory/file directly onto
+`cdecrypt.exe`.
