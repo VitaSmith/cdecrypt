@@ -238,7 +238,10 @@ static bool extract_file_hash(FILE* src, uint64_t part_data_offset, uint64_t fil
         if (write_size > size)
             write_size = size;
 
-        fread(enc, sizeof(char), BLOCK_SIZE, src);
+        if (fread(enc, sizeof(char), BLOCK_SIZE, src) != BLOCK_SIZE) {
+            fprintf(stderr, "ERROR: Could not read %d bytes from '%s'\n", BLOCK_SIZE, path);
+            goto out;
+        }
 
         memset(iv, 0, sizeof(iv));
         iv[1] = (uint8_t)content_id;
@@ -261,7 +264,7 @@ static bool extract_file_hash(FILE* src, uint64_t part_data_offset, uint64_t fil
             hexdump(hash, SHA_DIGEST_LENGTH);
             hexdump(hashes, 0x100);
             hexdump(dec, 0x100);
-            fprintf(stderr, "ERROR: Failed to verify H0 hash\n");
+            fprintf(stderr, "ERROR: Could not verify H0 hash\n");
             goto out;
         }
 
@@ -324,7 +327,10 @@ static bool extract_file(FILE* src, uint64_t part_data_offset, uint64_t file_off
         if (write_size > size)
             write_size = size;
 
-        fread(enc, sizeof(char), BLOCK_SIZE, src);
+        if (fread(enc, sizeof(char), BLOCK_SIZE, src) != BLOCK_SIZE) {
+            fprintf(stderr, "ERROR: Could not read %d bytes from '%s'\n", BLOCK_SIZE, path);
+            goto out;
+        }
 
         aes_crypt_cbc(&ctx, AES_DECRYPT, BLOCK_SIZE, iv, (const uint8_t*)(enc), (uint8_t*)dec);
 
@@ -356,6 +362,7 @@ int main_utf8(int argc, char** argv)
     FILE* src = NULL;
     TitleMetaData* tmd = NULL;
     uint8_t *tik = NULL, *cnt = NULL;
+    const char* pattern[] = { "%s%c%08x.app", "%s%c%08X.app", "%s%c%08x", "%s%c%08X" };
 
     if (argc < 2) {
         printf("%s %s - Wii U NUS content file decrypter\n"
@@ -383,8 +390,7 @@ int main_utf8(int argc, char** argv)
                     tik_path = strdup(argv[1]);
                     tik_path[strlen(tik_path) - 2] = 'i';
                     tik_path[strlen(tik_path) - 1] = 'k';
-                }
-                else {
+                } else {
                     tik_path = strdup(argv[2]);
                 }
             } else if (magic == TIK_MAGIC) {
@@ -393,8 +399,7 @@ int main_utf8(int argc, char** argv)
                     tmd_path = strdup(argv[1]);
                     tmd_path[strlen(tik_path) - 2] = 'm';
                     tmd_path[strlen(tik_path) - 1] = 'd';
-                }
-                else {
+                } else {
                     tmd_path = strdup(argv[2]);
                 }
             }
@@ -543,17 +548,18 @@ int main_utf8(int argc, char** argv)
                 cnt_offset, getbe16(&fe[i].ContentID), getbe16(&fe[i].Flags), &path[short_path]);
 
             uint32_t cnt_file_id = getbe32(&tmd->Contents[getbe16(&fe[i].ContentID)].ID);
-            sprintf(str, "%s%c%08X.app", argv[1], PATH_SEP, cnt_file_id);
 
             if (!(fe[i].Type & 0x80)) {
+                // Handle upper/lowercase for target as well as files without extension
+                for (uint32_t k = 0; k < array_size(pattern); k++) {
+                    sprintf(str, pattern[k], argv[1], PATH_SEP, cnt_file_id);
+                    if (is_file(str))
+                        break;
+                }
                 src = fopen_utf8(str, "rb");
                 if (src == NULL) {
-                    sprintf(str, "%s%c%08X", argv[1], PATH_SEP, cnt_file_id);
-                    src = fopen_utf8(str, "rb");
-                    if (src == NULL) {
-                        fprintf(stderr, "ERROR: Could not open: '%s'\n", str);
-                        goto out;
-                    }
+                    fprintf(stderr, "ERROR: Could not open: '%s'\n", str);
+                    goto out;
                 }
                 if ((getbe16(&fe[i].Flags) & 0x440)) {
                     if (!extract_file_hash(src, 0, cnt_offset, getbe32(&fe[i].FileLength), path, getbe16(&fe[i].ContentID)))

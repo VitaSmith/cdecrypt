@@ -461,7 +461,6 @@ int aes_setkey_enc(aes_context* ctx, const uint8_t* key, unsigned int keybits)
     {
         aes_gen_tables();
         aes_init_done = 1;
-
     }
 #endif
 
