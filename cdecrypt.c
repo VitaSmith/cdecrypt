@@ -460,16 +460,22 @@ int main_utf8(int argc, char** argv)
     uint8_t iv[16];
     memset(iv, 0, sizeof(iv));
 
-    sprintf(str, "%s%c%08X.app", argv[1], PATH_SEP, getbe32(&tmd->Contents[0].ID));
+    for (uint32_t k = 0; k < (array_size(pattern) / 2); k++) {
+        sprintf(str, pattern[k], argv[1], PATH_SEP, getbe32(&tmd->Contents[0].ID));
+        if (is_file(str))
+            break;
+    }
 
     uint32_t cnt_len = read_file(str, &cnt);
     if (cnt_len == 0) {
-        sprintf(str, "%s%c%08X", argv[1], PATH_SEP, getbe32(&tmd->Contents[0].ID));
-        cnt_len = read_file(str, &cnt);
-        if (cnt_len == 0) {
-            fprintf(stderr, "ERROR: Failed to open content: %02X\n", getbe32(&tmd->Contents[0].ID));
-            goto out;
+        for (uint32_t k = (array_size(pattern) / 2); k < array_size(pattern); k++) {
+            sprintf(str, pattern[k], argv[1], PATH_SEP, getbe32(&tmd->Contents[0].ID));
+            if (is_file(str))
+                break;
         }
+        cnt_len = read_file(str, &cnt);
+        if (cnt_len == 0)
+            goto out;
     }
 
     if (getbe64(&tmd->Contents[0].Size) != (uint64_t)cnt_len) {
