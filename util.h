@@ -1,6 +1,6 @@
 /*
   Common code for Gust (Koei/Tecmo) PC games tools
-  Copyright © 2019-2020 VitaSmith
+  Copyright © 2019-2021 VitaSmith
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 #include <crtdbg.h>
 #endif
 
-#if defined(__APPLE__)
+#if !defined(_WIN32)
 #include <libgen.h>
 #endif
 #include <stdbool.h>
@@ -50,7 +50,7 @@
 #if !defined(S_ISREG)
 #define S_ISREG(ST_MODE) (((ST_MODE) & _S_IFMT) == _S_IFREG)
 #endif
-#define CREATE_DIR(path) CreateDirectoryA(path, NULL)
+#define CREATE_DIR(path) CreateDirectory_utf8(path, NULL)
 #define PATH_SEP '\\'
 #else
 #if defined(__APPLE__)
@@ -85,20 +85,17 @@
 #endif
 
 #if defined(_WIN32)
-static __inline char* _basename(const char* path, bool remove_extension)
-{
-    static char basename[128];
-    static char ext[64];
-    ext[0] = 0;
-    _splitpath_s(path, NULL, 0, NULL, 0, basename, sizeof(basename), ext, sizeof(ext));
-    if ((ext[0] != 0) && !remove_extension)
-        strncat(basename, ext, sizeof(basename) - strlen(basename));
-    return basename;
-}
-#define basename(path) _basename(path, false)
-#define appname(path) _basename(path, true)
+char* _basename_win32(const char* path, bool remove_extension);
+char* _dirname_win32(const char* path);
+#define _basename(path) _basename_win32(path, false)
+#define _appname(path) _basename_win32(path, true)
+#define _dirname(path) _dirname_win32(path)
 #else
-#define appname(path) basename(path)
+char* _basename_unix(const char* path);
+char* _dirname_unix(const char* path);
+#define _basename(path) _basename_unix(path)
+#define _appname(path) _basename_unix(path)
+#define _dirname(path) _dirname_unix(path)
 #endif
 
 #if defined (_MSC_VER)

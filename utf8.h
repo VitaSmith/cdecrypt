@@ -111,6 +111,15 @@ static __inline int stat64_utf8(const char* path, struct stat64* buffer)
     return r;
 }
 
+static __inline BOOL CreateDirectory_utf8(const char* path, LPSECURITY_ATTRIBUTES attrs)
+{
+    BOOL r;
+    wchar_t* path16 = utf8_to_utf16(path);
+    r = CreateDirectoryW(path16, attrs);
+    free(path16);
+    return r;
+}
+
 #define CALL_MAIN int wmain(int argc, wchar_t** argv16) {   \
     SetConsoleOutputCP(CP_UTF8);                            \
     char** argv = calloc(argc, sizeof(char*));              \
