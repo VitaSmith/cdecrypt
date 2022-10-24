@@ -217,7 +217,6 @@ static bool extract_file_hash(FILE* src, uint64_t part_data_offset, uint64_t fil
     uint8_t h0[SHA_DIGEST_LENGTH];
     uint8_t hashes[HASHES_SIZE];
 
-    uint64_t written = 0;
     uint64_t write_size = HASH_BLOCK_SIZE;
     uint64_t block_number = (file_offset / HASH_BLOCK_SIZE) & 0x0F;
 
@@ -270,8 +269,6 @@ static bool extract_file_hash(FILE* src, uint64_t part_data_offset, uint64_t fil
 
         size -= fwrite(dec + soffset, sizeof(char), (size_t)write_size, dst);
 
-        written += write_size;
-
         block_number++;
         if (block_number >= 16)
             block_number = 0;
@@ -301,7 +298,6 @@ static bool extract_file(FILE* src, uint64_t part_data_offset, uint64_t file_off
     uint8_t* dec = malloc(BLOCK_SIZE);
     assert(enc != NULL);
     assert(dec != NULL);
-    uint64_t written = 0;
 
     // Calc real offset
     uint64_t roffset = file_offset / BLOCK_SIZE * BLOCK_SIZE;
@@ -335,8 +331,6 @@ static bool extract_file(FILE* src, uint64_t part_data_offset, uint64_t file_off
         aes_crypt_cbc(&ctx, AES_DECRYPT, BLOCK_SIZE, iv, (const uint8_t*)(enc), (uint8_t*)dec);
 
         size -= fwrite(dec + soffset, sizeof(char), (size_t)write_size, dst);
-
-        written += write_size;
 
         if (soffset) {
             write_size = BLOCK_SIZE;
