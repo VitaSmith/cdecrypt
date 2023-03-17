@@ -550,6 +550,7 @@ int main_utf8(int argc, char** argv)
             uint32_t cnt_file_id = getbe32(&tmd->Contents[getbe16(&fe[i].ContentID)].ID);
 
             if (!(fe[i].Type & 0x80)) {
+                uint16_t tmd_flags = tmd->Contents[getbe16(&fe[i].ContentID)].Type;
                 // Handle upper/lowercase for target as well as files without extension
                 for (uint32_t k = 0; k < array_size(pattern); k++) {
                     sprintf(str, pattern[k], argv[1], PATH_SEP, cnt_file_id);
@@ -561,7 +562,7 @@ int main_utf8(int argc, char** argv)
                     fprintf(stderr, "ERROR: Could not open: '%s'\n", str);
                     goto out;
                 }
-                if ((getbe16(&fe[i].Flags) & 0x440)) {
+                if ((getbe16(&tmd_flags) & 0x02)) {
                     if (!extract_file_hash(src, 0, cnt_offset, getbe32(&fe[i].FileLength), path, getbe16(&fe[i].ContentID)))
                         goto out;
                 } else {
