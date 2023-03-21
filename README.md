@@ -1,6 +1,7 @@
 # CDecrypt
 
-[![Build status](https://img.shields.io/appveyor/ci/VitaSmith/cdecrypt.svg?style=flat-square)](https://ci.appveyor.com/project/VitaSmith/cdecrypt)
+[![Windows Build](https://img.shields.io/github/actions/workflow/status/VitaSmith/cdecrypt/windows.yml?style=flat-square&label=Windows%20Build)](https://github.com/VitaSmith/cdecrypt/actions/workflows/windows.yml)
+[![Linux Build](https://img.shields.io/github/actions/workflow/status/VitaSmith/cdecrypt/linux.yml?style=flat-square&label=Linux%20Build)](https://github.com/VitaSmith/cdecrypt/actions/workflows/linux.yml)
 [![Github stats](https://img.shields.io/github/downloads/VitaSmith/cdecrypt/total.svg?style=flat-square)](https://github.com/VitaSmith/cdecrypt/releases)
 [![Latest release](https://img.shields.io/github/release-pre/VitaSmith/cdecrypt?style=flat-square)](https://github.com/VitaSmith/cdecrypt/releases)
 
