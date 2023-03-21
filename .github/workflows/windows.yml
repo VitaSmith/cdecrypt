@@ -1,0 +1,56 @@
+name: Windows
+
+on: [push, pull_request]
+
+env:
+  PROJECT_NAME: cdecrypt
+  FRIENDLY_NAME: CDecrypt
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: Set version
+      shell: bash
+      id: set_version
+      run: echo "version=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
+
+    - name: Set major and minor
+      uses: actions-ecosystem/action-regex-match@v2
+      id: regex_match
+      with:
+        text: ${{ steps.set_version.outputs.version }}
+        regex: 'v(\d+)\.(\d+)'
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Build
+      run: msbuild ${{ env.PROJECT_NAME }}.sln /m /p:Configuration=Release /p:Platform=x86 /p:AppVersion=${{ steps.set_version.outputs.version }} /p:AppMajor=${{ steps.regex_match.outputs.group1 }} /p:AppMinor=${{ steps.regex_match.outputs.group2 }}
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.PROJECT_NAME }}
+        path: ./x86/Release/*.exe
+
+    - name: Prepare release
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        7z a ${{ env.PROJECT_NAME }}.zip .\x86\Release\*.exe README.md LICENSE.txt
+        sha256sum ${{ env.PROJECT_NAME }}.zip
+
+    - name: Upload release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        body: ${{ env.FRIENDLY_NAME}} ${{ steps.set_version.outputs.version }}
+        files: ./*.zip

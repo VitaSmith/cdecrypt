@@ -44,7 +44,7 @@ BEGIN
             VALUE "FileDescription",    APP_DESC
             VALUE "FileVersion",        TO_STRING(APP_MAJOR) "," TO_STRING(APP_MINOR) ",0,0"
             VALUE "InternalName",       APP_NAME
-            VALUE "LegalCopyright",     "Copyright © 2020 VitaSmith, Copyright © 2013-2015 crediar"
+            VALUE "LegalCopyright",     "Copyright © 2020-2023 VitaSmith, Copyright © 2013-2015 crediar"
             VALUE "OriginalFilename",   EXE_NAME
             VALUE "ProductName",        APP_NAME
             VALUE "ProductVersion",     TO_STRING(APP_MAJOR) "," TO_STRING(APP_MINOR) ",0,0"

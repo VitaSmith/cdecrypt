@@ -360,7 +360,7 @@ int main_utf8(int argc, char** argv)
 
     if (argc < 2) {
         printf("%s %s - Wii U NUS content file decrypter\n"
-            "Copyright (c) 2020-2022 VitaSmith, Copyright (c) 2013-2015 crediar\n"
+            "Copyright (c) 2020-2023 VitaSmith, Copyright (c) 2013-2015 crediar\n"
             "Visit https://github.com/VitaSmith/cdecrypt for official source and downloads.\n\n"
             "Usage: %s <file or directory>\n\n"
             "This program is free software; you can redistribute it and/or modify it under\n"
